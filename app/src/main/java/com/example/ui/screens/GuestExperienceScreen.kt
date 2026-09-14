@@ -59,7 +59,7 @@ fun GuestExperienceScreen(
 ) {
   val isMasterPreview = (guest == null)
   val token = guest?.uniqueToken ?: "master_preview"
-  val hostedUrl = "https://yourusername.github.io/inviora/invite/$token"
+  val hostedUrl = "https://techdevelopers32.github.io/Inviora/invite/$token"
   val animType = animation?.animationType ?: "CURTAIN"
 
   // Check if link is active/valid

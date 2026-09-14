@@ -173,7 +173,7 @@ fun GuestsScreen(
   }
 
   fun shareViaWhatsApp(guest: GuestEntity, event: EventEntity) {
-    val link = "https://yourusername.github.io/inviora/invite/${guest.uniqueToken}"
+    val link = "https://techdevelopers32.github.io/Inviora/invite/${guest.uniqueToken}"
     val message = "Dear ${guest.name},\n\nWe are delighted to invite you to celebrate ${event.title}.\n\nPlease open your invitation here:\n$link"
     val intent = Intent(Intent.ACTION_SEND).apply {
       type = "text/plain"
@@ -358,7 +358,7 @@ fun GuestsScreen(
         verticalArrangement = Arrangement.spacedBy(10.dp)
       ) {
         items(currentEventGuests, key = { it.id }) { guest ->
-          val guestLink = "https://yourusername.github.io/inviora/invite/${guest.uniqueToken}"
+          val guestLink = "https://techdevelopers32.github.io/Inviora/invite/${guest.uniqueToken}"
           val invitedPages = guest.getInvitedPages(eventPages)
 
           Card(
