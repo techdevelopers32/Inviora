@@ -529,6 +529,7 @@ class ExampleUnitTest {
     val firestoreMap = dto.toMap()
     assertEquals("KzUSUB", firestoreMap["token"])
     assertEquals(true, firestoreMap["active"])
+    assertFalse(firestoreMap.containsKey("phone"))
     assertNotNull(firestoreMap["pages"])
     val pagesList = firestoreMap["pages"] as List<*>
     assertEquals(2, pagesList.size)

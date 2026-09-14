@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Inviora — Digital Invitation</title>
+  <meta name="description" content="View your personalized digital event invitation on Inviora.">
+  <meta name="theme-color" content="#141211">
+
+  <!-- Dynamic Base Href for GitHub Pages SPA Routing -->
+  <script>
+    (function() {
+      var p = window.location.pathname;
+      if (p.indexOf('/Inviora') !== -1) {
+        document.write('<base href="/Inviora/">');
+      } else if (p.indexOf('/web') !== -1) {
+        document.write('<base href="/web/">');
+      } else {
+        document.write('<base href="./">');
+      }
+    })();
+  </script>
+
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- Firebase Web SDK (Compat - Client Read Only) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+  <!-- Cinematic Curtain Reveal Overlay (anim_velvet_curtain) -->
+  <div id="cinematicOverlay" class="cinematic-overlay">
+    <div class="curtain-valance"></div>
+    <div class="curtain-panel left">
+      <div class="curtain-fringe"></div>
+    </div>
+    <div class="curtain-panel right">
+      <div class="curtain-fringe"></div>
+    </div>
+    <div id="centerSealWrapper" class="center-seal-wrapper">
+      <div class="golden-seal">
+        <span id="sealMonogram" class="seal-monogram">I</span>
+      </div>
+      <div class="seal-prompt-pill">
+        <svg class="touch-icon" viewBox="0 0 24 24">
+          <path d="M9 11.24V7.5C9 6.12 10.12 5 11.5 5S14 6.12 14 7.5v3.74c1.21-.81 2-2.18 2-3.74C16 5.01 13.99 3 11.5 3S7 5.01 7 7.5c0 1.56.79 2.93 2 3.74zm9.84 4.63l-4.54-2.26c-.17-.07-.35-.11-.54-.11H13v-6c0-.83-.67-1.5-1.5-1.5S10 6.67 10 7.5v10.74l-3.44-.72c-.09-.02-.18-.03-.27-.03-.38 0-.73.16-.98.41l-.81.82 4.93 4.93c.36.36.86.56 1.37.56h7.49c.98 0 1.81-.71 1.97-1.68l.81-4.87c.05-.33-.03-.66-.23-.93z"/>
+        </svg>
+        <span>Tap to Open Invitation</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <!-- Brand Header -->
+    <header class="brand-header">
+      <svg class="brand-crest" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="#D4AF37" stroke="#AA7C11" stroke-width="0.8"/>
+      </svg>
+      <span class="brand-title">Inviora</span>
+    </header>
+
+    <!-- State: Loading Screen -->
+    <div id="loadingScreen" class="status-screen">
+      <div class="spinner"></div>
+      <div class="status-title">Preparing Your Invitation</div>
+      <div class="status-message">Unfolding ceremony details and personalized RSVP...</div>
+    </div>
+
+    <!-- State: Error / Not Found Screen -->
+    <div id="errorScreen" class="status-screen hidden">
+      <svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="1.6">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <div id="errorTitle" class="status-title">Invitation Not Found</div>
+      <div id="errorMessage" class="status-message">
+        We could not locate an invitation for this link. Please verify your invitation URL.
+      </div>
+    </div>
+
+    <!-- State: Direct Root / Manual Code Entry Screen -->
+    <div id="rootPromptScreen" class="status-screen hidden">
+      <svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="1.6">
+        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+        <polyline points="22,6 12,13 2,6"/>
+      </svg>
+      <div class="status-title">Digital Invitation Viewer</div>
+      <div class="status-message">
+        Please open your invitation link directly or enter your 6-character invitation code below:
+      </div>
+      <div class="token-input-group">
+        <input id="manualTokenInput" type="text" class="token-input" placeholder="e.g. KzUSUB" maxlength="12">
+        <button id="manualTokenSubmit" class="token-btn">Open</button>
+      </div>
+    </div>
+
+    <!-- State: Active Invitation Stage -->
+    <main id="invitationStage" class="invitation-stage hidden">
+      <div class="card-wrapper">
+        <div id="invitationCard" class="invitation-card">
+          <!-- Background Artwork (SVG test image or public URL) -->
+          <img id="cardArtwork" class="card-artwork" src="" alt="Invitation Artwork">
+
+          <!-- Dynamic Proportional Text Layers -->
+          <div id="cardLayers" class="card-layers-container"></div>
+
+          <!-- Navigation Arrow Overlays -->
+          <button id="cardPrevBtn" class="card-nav-arrow prev hidden" aria-label="Previous Ceremony">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+              <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+            </svg>
+          </button>
+          <button id="cardNextBtn" class="card-nav-arrow next hidden" aria-label="Next Ceremony">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+              <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Ceremony Tabs & Counter -->
+      <nav class="page-navigation-panel" aria-label="Ceremonies">
+        <div id="pageCounter" class="page-counter-badge"></div>
+        <div id="ceremonyTabs" class="ceremony-tabs"></div>
+      </nav>
+
+      <!-- Replay Reveal Action -->
+      <div class="action-controls">
+        <button id="replayExperienceBtn" class="action-btn">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+            <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+          </svg>
+          <span>Replay Experience</span>
+        </button>
+      </div>
+
+      <footer class="guest-footer">
+        Powered by <a href="https://github.com/techdevelopers32/Inviora" target="_blank" rel="noopener">Inviora</a>
+      </footer>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

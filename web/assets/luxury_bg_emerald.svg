@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 588" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGradEmerald" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0E2B1E"/>
+      <stop offset="50%" stop-color="#0A1F16"/>
+      <stop offset="100%" stop-color="#05140D"/>
+    </linearGradient>
+    <linearGradient id="emeraldGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F7E7A9"/>
+      <stop offset="35%" stop-color="#D4AF37"/>
+      <stop offset="70%" stop-color="#B8860B"/>
+      <stop offset="100%" stop-color="#D4AF37"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="100%" height="100%" fill="url(#bgGradEmerald)"/>
+
+  <!-- Ornate borders -->
+  <rect x="14" y="14" width="372" height="560" rx="12" fill="none" stroke="url(#emeraldGold)" stroke-width="1.8"/>
+  <rect x="19" y="19" width="362" height="550" rx="9" fill="none" stroke="#D4AF37" stroke-width="0.5" stroke-opacity="0.5" stroke-dasharray="2,2"/>
+
+  <!-- Corner Ornaments (Top-Left) -->
+  <g transform="translate(18, 18)">
+    <path d="M0,0 L32,0 C22,10 10,22 0,32 Z" fill="url(#emeraldGold)" opacity="0.85"/>
+    <circle cx="10" cy="10" r="2.5" fill="#F7E7A9"/>
+  </g>
+  <!-- Corner Ornaments (Top-Right) -->
+  <g transform="translate(382, 18) scale(-1, 1)">
+    <path d="M0,0 L32,0 C22,10 10,22 0,32 Z" fill="url(#emeraldGold)" opacity="0.85"/>
+    <circle cx="10" cy="10" r="2.5" fill="#F7E7A9"/>
+  </g>
+  <!-- Corner Ornaments (Bottom-Left) -->
+  <g transform="translate(18, 570) scale(1, -1)">
+    <path d="M0,0 L32,0 C22,10 10,22 0,32 Z" fill="url(#emeraldGold)" opacity="0.85"/>
+    <circle cx="10" cy="10" r="2.5" fill="#F7E7A9"/>
+  </g>
+  <!-- Corner Ornaments (Bottom-Right) -->
+  <g transform="translate(382, 570) scale(-1, -1)">
+    <path d="M0,0 L32,0 C22,10 10,22 0,32 Z" fill="url(#emeraldGold)" opacity="0.85"/>
+    <circle cx="10" cy="10" r="2.5" fill="#F7E7A9"/>
+  </g>
+</svg>

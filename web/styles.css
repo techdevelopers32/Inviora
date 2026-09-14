@@ -1,0 +1,551 @@
+@import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Cinzel:wght@500;600;700;800&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  --color-gold-primary: #D4AF37;
+  --color-gold-dark: #AA7C11;
+  --color-gold-light: #F3E5AB;
+  --color-gold-border: rgba(212, 175, 55, 0.35);
+  --color-velvet-crimson: #6B0F1A;
+  --color-velvet-deep: #3A050D;
+  --color-ivory-bg: #141211;
+  --color-card-bg: #FCFBF7;
+  --color-text-dark: #1E1A16;
+  --color-text-muted: #5C544C;
+  --color-text-light: #FAF8F5;
+  --font-serif-display: 'Cinzel', 'Playfair Display', serif;
+  --font-serif-body: 'Cormorant Garamond', Georgia, serif;
+  --font-arabic: 'Amiri', 'Traditional Arabic', serif;
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  min-height: 100%;
+  background-color: var(--color-ivory-bg);
+  background-image: 
+    radial-gradient(circle at 50% 20%, rgba(212, 175, 55, 0.08) 0%, transparent 60%),
+    radial-gradient(circle at 80% 80%, rgba(107, 15, 26, 0.15) 0%, transparent 50%),
+    linear-gradient(180deg, #181513 0%, #0E0C0B 100%);
+  color: var(--color-text-light);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+
+/* App Viewport Container */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100vh;
+  padding: 16px 12px 32px 12px;
+  position: relative;
+}
+
+/* Brand Header */
+.brand-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 0 16px 0;
+  opacity: 0.9;
+}
+
+.brand-crest {
+  width: 22px;
+  height: 22px;
+}
+
+.brand-title {
+  font-family: var(--font-serif-display);
+  font-size: 15px;
+  letter-spacing: 3px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--color-gold-light), var(--color-gold-primary), var(--color-gold-dark));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-transform: uppercase;
+}
+
+/* State Screens: Loading, Error, NotFound */
+.status-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  max-width: 360px;
+  margin: auto;
+  padding: 32px 24px;
+  background: rgba(30, 26, 22, 0.85);
+  border: 1px solid var(--color-gold-border);
+  border-radius: 20px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+}
+
+.status-screen.hidden {
+  display: none !important;
+}
+
+.status-icon {
+  width: 54px;
+  height: 54px;
+  margin-bottom: 20px;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(212, 175, 55, 0.2);
+  border-top-color: var(--color-gold-primary);
+  border-radius: 50%;
+  animation: spin 1s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.status-title {
+  font-family: var(--font-serif-display);
+  font-size: 20px;
+  color: var(--color-gold-light);
+  margin-bottom: 12px;
+  letter-spacing: 1px;
+}
+
+.status-message {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #C2B8AD;
+}
+
+/* Prompt Card for manual token entry if opened at root */
+.token-input-group {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+  width: 100%;
+}
+
+.token-input {
+  flex: 1;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--color-gold-border);
+  border-radius: 10px;
+  color: #FFF;
+  font-size: 15px;
+  font-family: var(--font-sans);
+  text-align: center;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.token-btn {
+  background: linear-gradient(135deg, var(--color-gold-primary), var(--color-gold-dark));
+  color: #000;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* INVITATION STAGE */
+.invitation-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 440px;
+  position: relative;
+}
+
+.invitation-stage.hidden {
+  display: none !important;
+}
+
+/* Card Container with Portrait Luxury Aspect Ratio (0.68) */
+.card-wrapper {
+  width: 100%;
+  position: relative;
+  container-type: inline-size;
+  padding: 4px;
+}
+
+.invitation-card {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 0.68;
+  background: var(--color-card-bg);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 
+    0 20px 48px rgba(0, 0, 0, 0.6),
+    0 2px 6px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(212, 175, 55, 0.4);
+  transition: transform 0.35s ease, opacity 0.35s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y;
+}
+
+/* Background Artwork */
+.card-artwork {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Layers Container */
+.card-layers-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Normalized Percentage-based Text Layer */
+.text-layer {
+  position: absolute;
+  left: calc(var(--x-percent) * 100%);
+  top: calc(var(--y-percent) * 100%);
+  transform: translate(-50%, -50%);
+  max-width: 88%;
+  text-align: var(--text-align, center);
+  color: var(--color, #1E1A16);
+  font-family: var(--font-family, var(--font-sans));
+  font-size: calc((var(--font-size-sp, 14) / 380) * 100cqw);
+  font-weight: var(--font-weight, 500);
+  font-style: var(--font-style, normal);
+  line-height: 1.25;
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 2px 6px;
+  text-shadow: var(--shadow, 1px 1px 4px rgba(255, 255, 255, 0.85));
+}
+
+/* Card Navigation Arrows (Side Overlays) */
+.card-nav-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(20, 18, 17, 0.75);
+  border: 1px solid var(--color-gold-border);
+  color: var(--color-gold-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 5;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.card-nav-arrow:active {
+  transform: translateY(-50%) scale(0.92);
+}
+
+.card-nav-arrow.prev {
+  left: 12px;
+}
+
+.card-nav-arrow.next {
+  right: 12px;
+}
+
+.card-nav-arrow.hidden {
+  display: none !important;
+}
+
+/* Page Indicator & Ceremony Tabs */
+.page-navigation-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  margin-top: 18px;
+  gap: 12px;
+}
+
+.ceremony-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.ceremony-tab-btn {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  background: rgba(30, 26, 22, 0.7);
+  color: #C2B8AD;
+  font-family: var(--font-serif-display);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.ceremony-tab-btn.active {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.3), rgba(170, 124, 17, 0.2));
+  border-color: var(--color-gold-primary);
+  color: var(--color-gold-light);
+  box-shadow: 0 0 14px rgba(212, 175, 55, 0.3);
+}
+
+.page-counter-badge {
+  font-size: 11px;
+  color: var(--color-gold-primary);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+/* Floating Actions: Replay Experience */
+.action-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: 24px;
+  border: 1px solid var(--color-gold-border);
+  background: rgba(30, 26, 22, 0.6);
+  color: var(--color-gold-light);
+  font-size: 12px;
+  font-family: var(--font-serif-display);
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+  border-color: var(--color-gold-primary);
+  background: rgba(45, 38, 30, 0.8);
+}
+
+/* CINEMATIC REVEAL STAGE (Curtain Experience) */
+.cinematic-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #0D0B0A;
+  transition: opacity 0.8s ease, visibility 0.8s ease;
+}
+
+.cinematic-overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Velvet Curtains */
+.curtain-panel {
+  position: absolute;
+  top: 0;
+  width: 50vw;
+  height: 100vh;
+  background: 
+    repeating-linear-gradient(
+      90deg,
+      var(--color-velvet-deep) 0px,
+      var(--color-velvet-crimson) 24px,
+      var(--color-velvet-deep) 48px
+    );
+  box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.85);
+  transition: transform 2.2s cubic-bezier(0.65, 0, 0.35, 1);
+  z-index: 101;
+}
+
+.curtain-panel.left {
+  left: 0;
+  transform-origin: left top;
+  border-right: 2px solid var(--color-gold-primary);
+}
+
+.curtain-panel.right {
+  right: 0;
+  transform-origin: right top;
+  border-left: 2px solid var(--color-gold-primary);
+}
+
+/* Golden Valance (Curtain Top Arch) */
+.curtain-valance {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 70px;
+  background: linear-gradient(180deg, var(--color-gold-dark) 0%, var(--color-gold-primary) 70%, transparent 100%);
+  opacity: 0.85;
+  z-index: 103;
+  clip-path: polygon(
+    0% 0%, 100% 0%, 100% 65%,
+    87.5% 85%, 75% 65%, 62.5% 85%,
+    50% 65%, 37.5% 85%, 25% 65%,
+    12.5% 85%, 0% 65%
+  );
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+/* Bottom Gold Fringe */
+.curtain-fringe {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 24px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--color-gold-dark) 0px,
+    var(--color-gold-primary) 4px,
+    var(--color-gold-light) 6px,
+    var(--color-gold-dark) 8px
+  );
+  box-shadow: 0 -4px 10px rgba(0,0,0,0.5);
+}
+
+/* Parted Curtains State */
+.cinematic-overlay.parted .curtain-panel.left {
+  transform: translateX(-100%);
+}
+
+.cinematic-overlay.parted .curtain-panel.right {
+  transform: translateX(100%);
+}
+
+/* Center Interactive Seal / Prompt */
+.center-seal-wrapper {
+  position: relative;
+  z-index: 105;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.4s ease, opacity 0.5s ease;
+}
+
+.cinematic-overlay.parted .center-seal-wrapper {
+  transform: scale(1.4);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.golden-seal {
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #FFF0BA, var(--color-gold-primary) 50%, var(--color-gold-dark) 90%);
+  box-shadow: 
+    0 12px 36px rgba(0, 0, 0, 0.7),
+    0 0 24px rgba(212, 175, 55, 0.5),
+    inset 0 2px 4px rgba(255, 255, 255, 0.8),
+    inset 0 -4px 8px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  animation: pulse-seal 2.8s ease-in-out infinite;
+}
+
+@keyframes pulse-seal {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7), 0 0 20px rgba(212, 175, 55, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 16px 44px rgba(0, 0, 0, 0.8), 0 0 32px rgba(212, 175, 55, 0.7);
+  }
+}
+
+.seal-monogram {
+  font-family: var(--font-serif-display);
+  font-size: 38px;
+  font-weight: 800;
+  color: #382405;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.6);
+}
+
+.seal-prompt-pill {
+  margin-top: 20px;
+  padding: 10px 24px;
+  background: rgba(20, 18, 17, 0.85);
+  border: 1px solid var(--color-gold-primary);
+  border-radius: 24px;
+  color: var(--color-gold-light);
+  font-family: var(--font-serif-display);
+  font-size: 13px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.touch-icon {
+  width: 16px;
+  height: 16px;
+  fill: var(--color-gold-primary);
+}
+
+/* Footer note */
+.guest-footer {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 11px;
+  color: #7A7268;
+  letter-spacing: 1px;
+}
+
+.guest-footer a {
+  color: var(--color-gold-primary);
+  text-decoration: none;
+}
