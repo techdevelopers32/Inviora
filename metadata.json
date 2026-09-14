@@ -1,0 +1,7 @@
+{
+  "name": "Inviora",
+  "description": "Moments, beautifully revealed. Premium digital invitation platform with reusable designs, cinematic opening animations, and personalized guest experiences.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
