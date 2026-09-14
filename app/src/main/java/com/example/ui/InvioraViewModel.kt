@@ -15,6 +15,8 @@ import com.example.data.model.EventPage
 import com.example.data.model.GuestEntity
 import com.example.data.model.PageGuestStyle
 import com.example.data.repository.InvioraRepository
+import com.example.data.repository.PublishEventResult
+import com.example.data.repository.PublishResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -319,4 +321,23 @@ class InvioraViewModel(application: Application) : AndroidViewModel(application)
       )
     }
   }
+
+  // --- Firestore Invitation Publishing ---
+  suspend fun publishInvitation(eventId: String, guestId: String): Result<PublishResult> =
+    repository.publishInvitation(eventId, guestId)
+
+  suspend fun publishEventInvitations(eventId: String): Result<PublishEventResult> =
+    repository.publishEventInvitations(eventId)
+
+  suspend fun updatePublishedInvitation(eventId: String, guestId: String): Result<PublishResult> =
+    repository.updatePublishedInvitation(eventId, guestId)
+
+  suspend fun updatePublishedEventInvitations(eventId: String): Result<PublishEventResult> =
+    repository.updatePublishedEventInvitations(eventId)
+
+  suspend fun deactivatePublishedInvitation(uniqueToken: String): Result<Unit> =
+    repository.deactivatePublishedInvitation(uniqueToken)
+
+  suspend fun getPublishedInvitation(uniqueToken: String): Result<Map<String, Any?>?> =
+    repository.getPublishedInvitation(uniqueToken)
 }

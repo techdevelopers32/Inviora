@@ -123,4 +123,29 @@ class InvioraRepository(
   suspend fun setCurrentEventId(eventId: String) {
     preferenceDao.setPreference(AppPreferenceEntity(KEY_CURRENT_EVENT_ID, eventId))
   }
+
+  // --- Firestore Invitation Publishing ---
+  val publishingRepository: FirestorePublishingRepository = FirestorePublishingRepository(
+    eventDao,
+    guestDao,
+    designDao
+  )
+
+  suspend fun publishInvitation(eventId: String, guestId: String): Result<PublishResult> =
+    publishingRepository.publishInvitation(eventId, guestId)
+
+  suspend fun publishEventInvitations(eventId: String): Result<PublishEventResult> =
+    publishingRepository.publishEventInvitations(eventId)
+
+  suspend fun updatePublishedInvitation(eventId: String, guestId: String): Result<PublishResult> =
+    publishingRepository.updatePublishedInvitation(eventId, guestId)
+
+  suspend fun updatePublishedEventInvitations(eventId: String): Result<PublishEventResult> =
+    publishingRepository.updatePublishedEventInvitations(eventId)
+
+  suspend fun deactivatePublishedInvitation(uniqueToken: String): Result<Unit> =
+    publishingRepository.deactivatePublishedInvitation(uniqueToken)
+
+  suspend fun getPublishedInvitation(uniqueToken: String): Result<Map<String, Any?>?> =
+    publishingRepository.getPublishedInvitation(uniqueToken)
 }

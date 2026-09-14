@@ -17,6 +17,9 @@ interface DesignDao {
   @Query("SELECT * FROM design_templates ORDER BY createdAt DESC")
   fun getAllDesigns(): Flow<List<DesignTemplateEntity>>
 
+  @Query("SELECT * FROM design_templates")
+  suspend fun getAllDesignsList(): List<DesignTemplateEntity>
+
   @Query("SELECT * FROM design_templates WHERE id = :id LIMIT 1")
   suspend fun getDesignById(id: String): DesignTemplateEntity?
 

@@ -1,11 +1,13 @@
 package com.example
 
+import com.example.data.model.DesignTemplateEntity
 import com.example.data.model.EventEntity
 import com.example.data.model.EventPage
 import com.example.data.model.GuestEntity
 import com.example.data.model.PageGuestStyle
 import com.example.data.model.TextLayerConfig
 import com.example.data.model.getDefaultGreetingForPage
+import com.example.data.repository.FirestorePublishingRepository
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -350,5 +352,185 @@ class ExampleUnitTest {
     assertEquals(listOf("page_baraat", "page_walima"), updatedGuest.getSelectedPageIds())
     assertFalse(PageGuestStyle.parseMap(updatedGuest.pageOverridesJson).containsKey(deletedPageId))
     assertTrue(PageGuestStyle.parseMap(updatedGuest.pageOverridesJson).containsKey("page_baraat"))
+  }
+
+  @Test
+  fun testFirestorePublishingDtoMappingAndPageFiltering() {
+    val designMehndi = DesignTemplateEntity(
+      id = "dsg_mehndi",
+      name = "Mehndi Velvet",
+      imagePath = "/data/user/0/com.aistudio.inviora.qxmr/files/designs/local_only.jpg",
+      accentColorHex = "#C89D3C",
+      fontStyle = "Calligraphic",
+      themeStyle = "MEHNDI_GOLD",
+      ornamentStyle = "HENNA_PATTERNS"
+    )
+    val designWalima = DesignTemplateEntity(
+      id = "dsg_walima",
+      name = "Emerald Royale",
+      imagePath = "/data/user/0/com.aistudio.inviora.qxmr/files/designs/local_emerald.jpg",
+      accentColorHex = "#0F3D29",
+      fontStyle = "Serif",
+      themeStyle = "ROYAL_EMERALD",
+      ornamentStyle = "ROYAL_BORDER"
+    )
+
+    val designsMap = mapOf(
+      designMehndi.id to designMehndi,
+      designWalima.id to designWalima
+    )
+
+    val pageMehndi = EventPage(
+      id = "page_mehndi",
+      eventId = "evt_wedding",
+      pageName = "Mehndi Night",
+      designId = "dsg_mehndi",
+      date = "Dec 18, 2026",
+      time = "7:00 PM",
+      venue = "Crystal Ballroom",
+      greeting = "Join us for Mehndi",
+      eventTitle = "Zayd & Fatima",
+      pageOrder = 0,
+      showBismillah = true
+    )
+    val pageBaraat = EventPage(
+      id = "page_baraat",
+      eventId = "evt_wedding",
+      pageName = "Baraat Ceremony",
+      designId = "dsg_mehndi",
+      date = "Dec 19, 2026",
+      time = "6:00 PM",
+      venue = "Grand Hall",
+      pageOrder = 1
+    )
+    val pageWalima = EventPage(
+      id = "page_walima",
+      eventId = "evt_wedding",
+      pageName = "Walima Reception",
+      designId = "dsg_walima",
+      date = "Dec 20, 2026",
+      time = "8:00 PM",
+      venue = "The Palace",
+      pageOrder = 2
+    )
+
+    val event = EventEntity(
+      id = "evt_wedding",
+      title = "Zayd & Fatima Wedding",
+      eventType = "Wedding",
+      groomName = "Zayd",
+      brideName = "Fatima",
+      hostNames = "Mr. & Mrs. Tariq",
+      primaryVenue = "The Palace",
+      primaryDate = "Dec 20, 2026",
+      designId = "dsg_mehndi",
+      animationId = "anim_velvet_curtain",
+      includeTraditionalGreeting = true,
+      traditionalBismillahText = "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ",
+      traditionalGreetingText = "Assalamu Alaikum",
+      defaultGuestNameFontSize = 24,
+      defaultGuestNameColorHex = "#D4AF37",
+      pagesJson = EventPage.listToJson(listOf(pageMehndi, pageBaraat, pageWalima))
+    )
+
+    // Guest is only invited to Mehndi and Walima (NOT Baraat)
+    val guestOverrideWalima = PageGuestStyle(
+      xPercent = 0.45f,
+      yPercent = 0.70f,
+      fontSizeSp = 28,
+      colorHex = "#0F3D29"
+    )
+    val guest = GuestEntity(
+      id = "gst_test",
+      eventId = "evt_wedding",
+      name = "Dr. & Mrs. Imran",
+      phone = "+1 555-4321",
+      uniqueToken = "KzUSUB",
+      active = true,
+      selectedPageIdsJson = GuestEntity.idsToJson(listOf("page_mehndi", "page_walima")),
+      pageOverridesJson = PageGuestStyle.mapToJson(mapOf("page_walima" to guestOverrideWalima))
+    )
+
+    // Construct mock publishing repository (no DAO or Firestore needed for DTO builder testing)
+    val fakeRepo = FirestorePublishingRepository(
+      eventDao = object : com.example.data.dao.EventDao {
+        override fun getAllEvents() = throw NotImplementedError()
+        override suspend fun getEventById(id: String) = null
+        override fun getEventFlow(id: String) = throw NotImplementedError()
+        override suspend fun getEventsUsingDesign(designId: String) = emptyList<EventEntity>()
+        override suspend fun getEventsUsingAnimation(animationId: String) = emptyList<EventEntity>()
+        override suspend fun insertEvent(event: EventEntity) {}
+        override suspend fun updateEvent(event: EventEntity) {}
+        override suspend fun deleteEventById(id: String) {}
+      },
+      guestDao = object : com.example.data.dao.GuestDao {
+        override fun getAllGuests() = throw NotImplementedError()
+        override fun getGuestsForEvent(eventId: String) = throw NotImplementedError()
+        override suspend fun getGuestsListForEvent(eventId: String) = emptyList<GuestEntity>()
+        override suspend fun getGuestByToken(token: String) = null
+        override fun getGuestCountForEvent(eventId: String) = throw NotImplementedError()
+        override fun getTotalGuestCount() = throw NotImplementedError()
+        override suspend fun insertGuest(guest: GuestEntity) {}
+        override suspend fun insertGuests(guests: List<GuestEntity>) {}
+        override suspend fun regenerateToken(id: String, newToken: String) {}
+        override suspend fun setGuestActive(id: String, isActive: Boolean) {}
+        override suspend fun deleteGuestById(id: String) {}
+        override suspend fun deleteGuestsForEvent(eventId: String) {}
+      },
+      designDao = object : com.example.data.dao.DesignDao {
+        override fun getAllDesigns() = throw NotImplementedError()
+        override suspend fun getAllDesignsList() = emptyList<DesignTemplateEntity>()
+        override suspend fun getDesignById(id: String) = null
+        override fun getDesignFlow(id: String) = throw NotImplementedError()
+        override suspend fun insertDesign(design: DesignTemplateEntity) {}
+        override suspend fun updateDesign(design: DesignTemplateEntity) {}
+        override suspend fun deleteDesignById(id: String) {}
+        override suspend fun renameDesign(id: String, newName: String) {}
+        override suspend fun toggleFavorite(id: String, isFav: Boolean) {}
+      }
+    )
+
+    val dto = fakeRepo.buildPublishedInvitationDto(event, guest, designsMap)
+
+    // 1. Root level verification
+    assertEquals("KzUSUB", dto.token)
+    assertTrue(dto.active)
+    assertEquals("evt_wedding", dto.eventId)
+    assertEquals("gst_test", dto.guestId)
+    assertEquals("Dr. & Mrs. Imran", dto.guestName)
+    assertEquals("anim_velvet_curtain", dto.animationId)
+    assertTrue(dto.traditionalGreeting.includeTraditionalGreeting)
+    assertEquals("بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ", dto.traditionalGreeting.traditionalBismillahText)
+    assertEquals(24, dto.defaultGuestNameSettings.fontSize)
+
+    // 2. Selected pages verification: Baraat must NOT be published
+    assertEquals(2, dto.pages.size)
+    assertEquals(listOf("page_mehndi", "page_walima"), dto.pages.map { it.pageId })
+
+    // 3. Design metadata verification (and verify local imagePath is excluded)
+    val mehndiPublishedPage = dto.pages.find { it.pageId == "page_mehndi" }!!
+    assertEquals("dsg_mehndi", mehndiPublishedPage.designMetadata.designId)
+    assertEquals("Mehndi Velvet", mehndiPublishedPage.designMetadata.designName)
+    assertEquals("#C89D3C", mehndiPublishedPage.designMetadata.accentColorHex)
+
+    val walimaPublishedPage = dto.pages.find { it.pageId == "page_walima" }!!
+    assertEquals("dsg_walima", walimaPublishedPage.designMetadata.designId)
+    assertEquals("Emerald Royale", walimaPublishedPage.designMetadata.designName)
+    assertEquals("#0F3D29", walimaPublishedPage.designMetadata.accentColorHex)
+
+    // 4. Guest override verification: Walima has custom override, Mehndi uses default
+    assertTrue(walimaPublishedPage.guestOverride.hasOverride)
+    assertEquals(0.45f, walimaPublishedPage.guestOverride.xPercent, 0.001f)
+    assertEquals(0.70f, walimaPublishedPage.guestOverride.yPercent, 0.001f)
+    assertEquals(28, walimaPublishedPage.guestOverride.fontSize)
+    assertEquals("#0F3D29", walimaPublishedPage.guestOverride.colorHex)
+
+    // 5. Serialization to map for Firestore collection publishedInvitations/{uniqueToken}
+    val firestoreMap = dto.toMap()
+    assertEquals("KzUSUB", firestoreMap["token"])
+    assertEquals(true, firestoreMap["active"])
+    assertNotNull(firestoreMap["pages"])
+    val pagesList = firestoreMap["pages"] as List<*>
+    assertEquals(2, pagesList.size)
   }
 }
