@@ -564,7 +564,7 @@ function setupCinematicReveal(animationId) {
 
   const family = resolveAnimationFamily(animationId);
 
-  // Remove any previous family classes
+  // Remove any previous family classes, init-pending, hidden, or parted states
   overlay.classList.remove(
     'family-curtain',
     'family-emerald',
@@ -572,10 +572,13 @@ function setupCinematicReveal(animationId) {
     'family-envelope',
     'family-silk',
     'family-glow',
-    'family-folding'
+    'family-folding',
+    'init-pending',
+    'hidden',
+    'parted'
   );
 
-  // Apply resolved family class
+  // Apply resolved family class BEFORE the overlay is visible to the guest
   overlay.classList.add(`family-${family}`);
 
   // Set monogram initials on the golden seal
@@ -689,7 +692,13 @@ function showError(title, message) {
  * 9. Firestore Data Loading
  */
 async function loadPublishedInvitation(token) {
-  showScreen('loadingScreen');
+  // Only display loading spinner if network fetch takes longer than 200ms
+  // to avoid a distracting flash on fast connections
+  const loadingTimer = setTimeout(() => {
+    if (!state.invitation) {
+      showScreen('loadingScreen');
+    }
+  }, 200);
 
   try {
     // Initialize Firebase
@@ -700,6 +709,7 @@ async function loadPublishedInvitation(token) {
 
     const docRef = db.collection('publishedInvitations').doc(token);
     const snapshot = await docRef.get();
+    clearTimeout(loadingTimer);
 
     if (!snapshot.exists) {
       showError(
@@ -728,12 +738,13 @@ async function loadPublishedInvitation(token) {
     state.invitation = data;
     state.currentPageIndex = 0;
 
-    // Reveal stage
+    // Apply animation family and establish overlay BEFORE showing the stage
+    setupCinematicReveal(data.animationId || 'anim_velvet_curtain');
     showScreen('invitationStage');
     renderPageCard(0);
-    setupCinematicReveal(data.animationId || 'anim_velvet_curtain');
 
   } catch (error) {
+    clearTimeout(loadingTimer);
     console.error("Error loading invitation from Firestore:", error);
     showError(
       "Unable to Load Invitation",
