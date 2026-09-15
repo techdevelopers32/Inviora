@@ -384,7 +384,17 @@ html, body {
   pointer-events: none;
 }
 
-/* Velvet Curtains */
+/* Base Panel Elements (Hidden by default, enabled by specific families) */
+.door-frame,
+.door-handle,
+.cinematic-glow-burst,
+.envelope-wrapper {
+  display: none;
+}
+
+/* --------------------------------------------------------------------------
+   Family 1: Imperial Velvet Curtain (Default / Fallback)
+   -------------------------------------------------------------------------- */
 .curtain-panel {
   position: absolute;
   top: 0;
@@ -450,7 +460,7 @@ html, body {
   box-shadow: 0 -4px 10px rgba(0,0,0,0.5);
 }
 
-/* Parted Curtains State */
+/* Default / Curtain Parted State */
 .cinematic-overlay.parted .curtain-panel.left {
   transform: translateX(-100%);
 }
@@ -459,10 +469,381 @@ html, body {
   transform: translateX(100%);
 }
 
+/* --------------------------------------------------------------------------
+   Family 5: Deep Emerald Velvet Reveal (anim_emerald_velvet)
+   -------------------------------------------------------------------------- */
+.cinematic-overlay.family-emerald .curtain-panel {
+  background: repeating-linear-gradient(
+    90deg,
+    #052317 0px,
+    #093d27 18px,
+    #0d5236 24px,
+    #093d27 30px,
+    #052317 48px
+  );
+  box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.92);
+}
+
+.cinematic-overlay.family-emerald.parted .curtain-panel.left {
+  transform: translateX(-100%);
+}
+
+.cinematic-overlay.family-emerald.parted .curtain-panel.right {
+  transform: translateX(100%);
+}
+
+/* --------------------------------------------------------------------------
+   Family 2: 3D Grand Palace Doors & Gates
+   (anim_palace_doors, anim_double_doors, anim_gilded_arch, anim_palace_fretwork,
+    anim_noir_gold_crest, anim_royal_frame)
+   -------------------------------------------------------------------------- */
+.cinematic-overlay.family-doors {
+  perspective: 1400px;
+  perspective-origin: center center;
+}
+
+.cinematic-overlay.family-doors .curtain-valance,
+.cinematic-overlay.family-doors .curtain-fringe {
+  display: none;
+}
+
+.cinematic-overlay.family-doors .curtain-panel {
+  background: linear-gradient(135deg, #181412 0%, #0d0b0a 50%, #151210 100%);
+  box-shadow: inset 0 0 70px rgba(0, 0, 0, 0.95);
+  transition: transform 2.4s cubic-bezier(0.22, 0.9, 0.28, 1), box-shadow 2.4s ease;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.cinematic-overlay.family-doors .curtain-panel.left {
+  transform-origin: left center;
+  border-right: 2px solid var(--color-gold-primary);
+}
+
+.cinematic-overlay.family-doors .curtain-panel.right {
+  transform-origin: right center;
+  border-left: 2px solid var(--color-gold-primary);
+}
+
+.cinematic-overlay.family-doors .door-frame {
+  display: block;
+  position: absolute;
+  top: 5%;
+  bottom: 5%;
+  width: 82%;
+  border: 2px solid rgba(212, 175, 55, 0.45);
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.85), 0 0 16px rgba(212, 175, 55, 0.15);
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.cinematic-overlay.family-doors .curtain-panel.left .door-frame {
+  right: 8%;
+}
+
+.cinematic-overlay.family-doors .curtain-panel.right .door-frame {
+  left: 8%;
+}
+
+.cinematic-overlay.family-doors .door-handle {
+  display: block;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 105px;
+  border-radius: 7px;
+  background: linear-gradient(180deg, var(--color-gold-light) 0%, var(--color-gold-primary) 50%, var(--color-gold-dark) 100%);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.8), 0 0 12px rgba(212, 175, 55, 0.4);
+}
+
+.cinematic-overlay.family-doors .curtain-panel.left .door-handle {
+  right: 18px;
+}
+
+.cinematic-overlay.family-doors .curtain-panel.right .door-handle {
+  left: 18px;
+}
+
+.cinematic-overlay.family-doors.parted .curtain-panel.left {
+  transform: rotateY(-105deg);
+  box-shadow: 30px 0 70px rgba(0, 0, 0, 0.95);
+}
+
+.cinematic-overlay.family-doors.parted .curtain-panel.right {
+  transform: rotateY(105deg);
+  box-shadow: -30px 0 70px rgba(0, 0, 0, 0.95);
+}
+
+/* --------------------------------------------------------------------------
+   Family 3: Royal Wax Seal Envelope & Card Emerge
+   (anim_wax_envelope, anim_card_emerge, anim_ribbon_tie, anim_monogram_stamp,
+    anim_luxury_box)
+   -------------------------------------------------------------------------- */
+.cinematic-overlay.family-envelope .curtain-valance,
+.cinematic-overlay.family-envelope .curtain-fringe,
+.cinematic-overlay.family-envelope .door-frame,
+.cinematic-overlay.family-envelope .door-handle {
+  display: none;
+}
+
+.cinematic-overlay.family-envelope .curtain-panel {
+  background: #0d0b0a;
+  box-shadow: none;
+  transition: opacity 1.3s 0.6s ease;
+}
+
+.cinematic-overlay.family-envelope.parted .curtain-panel {
+  opacity: 0;
+  transform: none;
+}
+
+.cinematic-overlay.family-envelope .envelope-wrapper {
+  display: block;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(88vw, 420px);
+  height: min(60vh, 280px);
+  perspective: 1200px;
+  z-index: 102;
+  transition: transform 1.2s 0.7s ease, opacity 0.8s 1.2s ease;
+}
+
+.cinematic-overlay.family-envelope .envelope-back {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #201a18 0%, #151110 100%);
+  border: 1.5px solid var(--color-gold-primary);
+  border-radius: 8px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.85), 0 0 28px rgba(212, 175, 55, 0.15);
+}
+
+.cinematic-overlay.family-envelope .envelope-card-peek {
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  bottom: 6%;
+  height: 84%;
+  background: linear-gradient(180deg, #26201c 0%, #191513 100%);
+  border: 1.5px solid rgba(212, 175, 55, 0.55);
+  border-radius: 6px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 18px;
+  transition: transform 1.3s 0.35s cubic-bezier(0.2, 0.85, 0.25, 1);
+  z-index: 103;
+}
+
+.cinematic-overlay.family-envelope .peek-ornament {
+  color: var(--color-gold-primary);
+  font-size: 16px;
+}
+
+.cinematic-overlay.family-envelope .peek-line {
+  width: 60px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-gold-primary), transparent);
+  margin-top: 8px;
+}
+
+.cinematic-overlay.family-envelope .envelope-pocket {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(28, 23, 21, 0.96) 0%, rgba(18, 15, 14, 0.99) 100%);
+  clip-path: polygon(0% 0%, 50% 50%, 100% 0%, 100% 100%, 0% 100%);
+  border-radius: 8px;
+  border-bottom: 1.5px solid var(--color-gold-primary);
+  z-index: 104;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.7);
+}
+
+.cinematic-overlay.family-envelope .envelope-flap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 52%;
+  background: linear-gradient(180deg, #2a231f 0%, #1d1816 100%);
+  clip-path: polygon(0% 0%, 50% 100%, 100% 0%);
+  border-top: 1.5px solid var(--color-gold-primary);
+  transform-origin: top center;
+  transition: transform 1.0s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 105;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.6);
+}
+
+.cinematic-overlay.family-envelope.parted .envelope-flap {
+  transform: rotateX(180deg);
+}
+
+.cinematic-overlay.family-envelope.parted .envelope-card-peek {
+  transform: translateY(-90px) scale(1.04);
+}
+
+.cinematic-overlay.family-envelope.parted .envelope-wrapper {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(1.08);
+}
+
+/* --------------------------------------------------------------------------
+   Family 4: Champagne Silk & Couture Atelier Veil
+   (anim_champagne_silk, anim_couture_veil, anim_botanical_garland, anim_floral_bloom)
+   -------------------------------------------------------------------------- */
+.cinematic-overlay.family-silk .curtain-valance,
+.cinematic-overlay.family-silk .curtain-fringe,
+.cinematic-overlay.family-silk .door-frame,
+.cinematic-overlay.family-silk .door-handle {
+  display: none;
+}
+
+.cinematic-overlay.family-silk .curtain-panel {
+  background: linear-gradient(
+    135deg,
+    rgba(240, 226, 202, 0.94) 0%,
+    rgba(215, 190, 150, 0.90) 25%,
+    rgba(255, 248, 230, 0.96) 50%,
+    rgba(205, 175, 130, 0.88) 75%,
+    rgba(235, 220, 190, 0.94) 100%
+  );
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: inset 0 0 60px rgba(180, 140, 70, 0.35);
+  transition: transform 2.3s cubic-bezier(0.25, 1, 0.35, 1), opacity 2.0s ease-out;
+  will-change: transform, opacity;
+}
+
+.cinematic-overlay.family-silk .curtain-panel.left {
+  left: 0;
+  border-right: 1.5px solid rgba(212, 175, 55, 0.6);
+}
+
+.cinematic-overlay.family-silk .curtain-panel.right {
+  right: 0;
+  border-left: 1.5px solid rgba(212, 175, 55, 0.6);
+}
+
+.cinematic-overlay.family-silk.parted .curtain-panel.left {
+  transform: translate(-100%, -20%) rotate(-4deg);
+  opacity: 0;
+}
+
+.cinematic-overlay.family-silk.parted .curtain-panel.right {
+  transform: translate(100%, -20%) rotate(4deg);
+  opacity: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Family 6: Radiant Light, Celestial Starlight & Shimmer
+   (anim_celestial_starlight, anim_rose_gold_sparkle, anim_soft_glow,
+    anim_golden_light, anim_crystal_glass, anim_cinematic_shadow)
+   -------------------------------------------------------------------------- */
+.cinematic-overlay.family-glow .curtain-valance,
+.cinematic-overlay.family-glow .curtain-fringe,
+.cinematic-overlay.family-glow .door-frame,
+.cinematic-overlay.family-glow .door-handle {
+  display: none;
+}
+
+.cinematic-overlay.family-glow .curtain-panel {
+  background: radial-gradient(circle at center, #1c1715 0%, #0d0b0a 100%);
+  box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.95);
+  transition: transform 2.0s cubic-bezier(0.2, 0.8, 0.25, 1), opacity 1.8s ease-out, filter 1.8s ease-out;
+}
+
+.cinematic-overlay.family-glow .curtain-panel.left {
+  border-right: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.cinematic-overlay.family-glow .curtain-panel.right {
+  border-left: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.cinematic-overlay.family-glow .cinematic-glow-burst {
+  display: block;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.1);
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 245, 200, 1) 0%, rgba(212, 175, 55, 0.7) 40%, rgba(212, 175, 55, 0) 70%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 104;
+  transition: transform 2.0s cubic-bezier(0.15, 0.9, 0.25, 1), opacity 2.0s ease-out;
+}
+
+.cinematic-overlay.family-glow.parted .cinematic-glow-burst {
+  transform: translate(-50%, -50%) scale(25);
+  opacity: 0.9;
+}
+
+.cinematic-overlay.family-glow.parted .curtain-panel.left {
+  transform: translateX(-40%) scale(1.05);
+  opacity: 0;
+  filter: blur(12px);
+}
+
+.cinematic-overlay.family-glow.parted .curtain-panel.right {
+  transform: translateX(40%) scale(1.05);
+  opacity: 0;
+  filter: blur(12px);
+}
+
+/* --------------------------------------------------------------------------
+   Family 7: 3D Handcrafted Paper & Folding Triptych
+   (anim_folding_triptych, anim_paper_unfold, anim_scroll_unroll, anim_origami_bloom)
+   -------------------------------------------------------------------------- */
+.cinematic-overlay.family-folding {
+  perspective: 1300px;
+  perspective-origin: center center;
+}
+
+.cinematic-overlay.family-folding .curtain-valance,
+.cinematic-overlay.family-folding .curtain-fringe,
+.cinematic-overlay.family-folding .door-frame,
+.cinematic-overlay.family-folding .door-handle {
+  display: none;
+}
+
+.cinematic-overlay.family-folding .curtain-panel {
+  background: linear-gradient(135deg, #1d1815 0%, #25201d 50%, #1a1614 100%);
+  border: 1px solid var(--color-gold-primary);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.85);
+  transition: transform 2.2s cubic-bezier(0.2, 0.85, 0.25, 1), opacity 2.0s ease-in, box-shadow 2.2s ease;
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
+}
+
+.cinematic-overlay.family-folding .curtain-panel.left {
+  transform-origin: left center;
+}
+
+.cinematic-overlay.family-folding .curtain-panel.right {
+  transform-origin: right center;
+}
+
+.cinematic-overlay.family-folding.parted .curtain-panel.left {
+  transform: rotateY(-115deg) scale(0.95);
+  opacity: 0;
+  box-shadow: 20px 0 50px rgba(0, 0, 0, 0.9);
+}
+
+.cinematic-overlay.family-folding.parted .curtain-panel.right {
+  transform: rotateY(115deg) scale(0.95);
+  opacity: 0;
+  box-shadow: -20px 0 50px rgba(0, 0, 0, 0.9);
+}
+
 /* Center Interactive Seal / Prompt */
 .center-seal-wrapper {
   position: relative;
-  z-index: 105;
+  z-index: 106;
   display: flex;
   flex-direction: column;
   align-items: center;

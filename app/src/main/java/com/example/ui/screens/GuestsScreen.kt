@@ -191,16 +191,19 @@ fun GuestsScreen(
           }
           context.startActivity(Intent.createChooser(intent, "Share Invitation via"))
         } else {
+          val errorMsg = shareUrlResult.exceptionOrNull()?.localizedMessage?.takeIf { it.isNotBlank() }
+            ?: "Publishing failed. Please try again."
           Toast.makeText(
             context,
-            "Unable to publish invitation. Please check your connection and try again.",
+            "Unable to publish invitation: $errorMsg",
             Toast.LENGTH_LONG
           ).show()
         }
       } catch (e: Exception) {
+        val errorMsg = e.localizedMessage?.takeIf { it.isNotBlank() } ?: "Please try again."
         Toast.makeText(
           context,
-          "Unable to publish invitation. Please check your connection and try again.",
+          "Unable to publish invitation: $errorMsg",
           Toast.LENGTH_LONG
         ).show()
       } finally {

@@ -306,7 +306,12 @@ open class FirestorePublishingRepository(
     val publishedPages = invitedPages.map { page ->
       val effectiveDesignId = page.designId.ifBlank { event.designId }
       val design = allDesignsMap[effectiveDesignId]
+      val isCustom = (design != null && design.isCustom) ||
+          (design == null && effectiveDesignId.isNotBlank() && effectiveDesignId !in BUILT_IN_DESIGN_IDS)
       val publicImageUrl = resolvePublicImageUrl(design, effectiveDesignId)
+
+      // Keep custom image Data URI on PublishedPageDto.publicImageUrl only, avoiding duplicate in designMetadata
+      val metadataPublicImageUrl = if (isCustom || publicImageUrl.startsWith("data:")) "" else publicImageUrl
 
       val designMetadata = PublishedDesignMetadataDto(
         designId = design?.id ?: effectiveDesignId.ifBlank { "default_design" },
@@ -315,7 +320,7 @@ open class FirestorePublishingRepository(
         fontStyle = design?.fontStyle ?: "Serif Calligraphic",
         themeStyle = design?.themeStyle ?: "ROYAL_GOLD",
         ornamentStyle = design?.ornamentStyle ?: "FLORAL_CORNER",
-        publicImageUrl = publicImageUrl
+        publicImageUrl = metadataPublicImageUrl
       )
 
       val hasPageOverride = guestOverridesMap.containsKey(page.id)

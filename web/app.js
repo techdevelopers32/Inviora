@@ -488,13 +488,95 @@ function isColorLight(hexColor) {
 }
 
 /**
- * 6. Cinematic Reveal (anim_velvet_curtain experience)
+ * Resolves an animationId from Firestore into one of 7 distinct visual entrance families.
+ * Always falls back safely to 'curtain' (Imperial Velvet Curtain).
+ */
+function resolveAnimationFamily(animationId) {
+  if (!animationId || typeof animationId !== 'string') {
+    return 'curtain';
+  }
+  const id = animationId.trim().toLowerCase();
+
+  switch (id) {
+    // 1. Imperial Velvet Curtain (Default / Fallback)
+    case 'anim_velvet_curtain':
+      return 'curtain';
+
+    // 2. Emerald Velvet Reveal
+    case 'anim_emerald_velvet':
+      return 'emerald';
+
+    // 3. 3D Grand Palace Doors & Gates
+    case 'anim_palace_doors':
+    case 'anim_double_doors':
+    case 'anim_gilded_arch':
+    case 'anim_palace_fretwork':
+    case 'anim_noir_gold_crest':
+    case 'anim_royal_frame':
+      return 'doors';
+
+    // 4. Royal Wax Seal Envelope & Card Emerge
+    case 'anim_wax_envelope':
+    case 'anim_card_emerge':
+    case 'anim_ribbon_tie':
+    case 'anim_monogram_stamp':
+    case 'anim_luxury_box':
+      return 'envelope';
+
+    // 5. Champagne Silk & Couture Atelier Veil
+    case 'anim_champagne_silk':
+    case 'anim_couture_veil':
+    case 'anim_botanical_garland':
+    case 'anim_floral_bloom':
+      return 'silk';
+
+    // 6. Radiant Light, Celestial Starlight & Shimmer
+    case 'anim_celestial_starlight':
+    case 'anim_rose_gold_sparkle':
+    case 'anim_soft_glow':
+    case 'anim_golden_light':
+    case 'anim_crystal_glass':
+    case 'anim_cinematic_shadow':
+      return 'glow';
+
+    // 7. 3D Handcrafted Paper & Folding Triptych
+    case 'anim_folding_triptych':
+    case 'anim_paper_unfold':
+    case 'anim_scroll_unroll':
+    case 'anim_origami_bloom':
+      return 'folding';
+
+    default:
+      return 'curtain';
+  }
+}
+
+/**
+ * 6. Cinematic Reveal (Dynamic experience based on selected animationId)
  */
 function setupCinematicReveal(animationId) {
   const overlay = document.getElementById('cinematicOverlay');
   const seal = document.getElementById('centerSealWrapper');
   const sealMonogram = document.getElementById('sealMonogram');
   const invitation = state.invitation;
+
+  if (!overlay || !seal) return;
+
+  const family = resolveAnimationFamily(animationId);
+
+  // Remove any previous family classes
+  overlay.classList.remove(
+    'family-curtain',
+    'family-emerald',
+    'family-doors',
+    'family-envelope',
+    'family-silk',
+    'family-glow',
+    'family-folding'
+  );
+
+  // Apply resolved family class
+  overlay.classList.add(`family-${family}`);
 
   // Set monogram initials on the golden seal
   if (sealMonogram && invitation) {
@@ -507,7 +589,7 @@ function setupCinematicReveal(animationId) {
     }
   }
 
-  // Open curtain on tap/click
+  // Open animation on tap/click
   seal.onclick = () => {
     triggerCurtainOpen();
   };
@@ -530,7 +612,7 @@ function triggerCurtainOpen() {
   // After animation finishes, hide overlay pointer events
   setTimeout(() => {
     overlay.classList.add('hidden');
-  }, 2300);
+  }, 2500);
 }
 
 function triggerCurtainReplay() {

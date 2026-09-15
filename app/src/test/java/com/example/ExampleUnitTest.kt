@@ -940,8 +940,8 @@ class ExampleUnitTest {
       )
 
       val pageDto = dto.pages.first()
-      assertTrue(pageDto.publicImageUrl.startsWith("data:image/jpeg;base64,"))
-      assertTrue(pageDto.designMetadata.publicImageUrl.startsWith("data:image/jpeg;base64,"))
+      assertTrue("Custom image must exist on page.publicImageUrl", pageDto.publicImageUrl.startsWith("data:image/jpeg;base64,"))
+      assertEquals("Custom image must NOT be duplicated in designMetadata.publicImageUrl", "", pageDto.designMetadata.publicImageUrl)
 
       val map = dto.toMap()
       @Suppress("UNCHECKED_CAST")
@@ -949,8 +949,75 @@ class ExampleUnitTest {
       val firstPageMap = pagesList.first()
       val mapPublicImageUrl = firstPageMap["publicImageUrl"] as String
       assertTrue(mapPublicImageUrl.startsWith("data:image/jpeg;base64,"))
+
+      @Suppress("UNCHECKED_CAST")
+      val metadataMap = firstPageMap["designMetadata"] as Map<String, Any?>
+      assertEquals("", metadataMap["publicImageUrl"])
     } finally {
       tempFile.delete()
     }
+  }
+
+  @Test
+  fun testBuildPublishedInvitationDtoWithBuiltInDesignPreservesBothUrls() {
+    val royalGold = DesignTemplateEntity(
+      id = "design_royal_gold",
+      name = "Royal Heritage",
+      referenceDrawable = "ref_royal_card"
+    )
+
+    val event = EventEntity(
+      id = "evt_wedding",
+      title = "Ali & Fatima Wedding",
+      eventType = "Wedding",
+      groomName = "Ali",
+      brideName = "Fatima",
+      designId = "design_royal_gold",
+      pagesJson = EventPage.listToJson(
+        listOf(
+          EventPage(
+            id = "page_reception",
+            eventId = "evt_wedding",
+            pageName = "Reception",
+            designId = "design_royal_gold"
+          )
+        )
+      )
+    )
+
+    val guest = GuestEntity(
+      id = "gst_1",
+      eventId = "evt_wedding",
+      name = "Zayd Khan",
+      uniqueToken = "8Cbeqy"
+    )
+
+    val daos = createFakeDaos()
+    val publishingRepo = FirestorePublishingRepository(
+      eventDao = daos.eventDao,
+      guestDao = daos.guestDao,
+      designDao = daos.designDao
+    )
+
+    val dto = publishingRepo.buildPublishedInvitationDto(
+      event = event,
+      guest = guest,
+      allDesignsMap = mapOf("design_royal_gold" to royalGold)
+    )
+
+    val pageDto = dto.pages.first()
+    val expectedUrl = "https://techdevelopers32.github.io/Inviora/assets/designs/ref_royal_card.jpg"
+    assertEquals(expectedUrl, pageDto.publicImageUrl)
+    assertEquals(expectedUrl, pageDto.designMetadata.publicImageUrl)
+
+    val map = dto.toMap()
+    @Suppress("UNCHECKED_CAST")
+    val pagesList = map["pages"] as List<Map<String, Any?>>
+    val firstPageMap = pagesList.first()
+    assertEquals(expectedUrl, firstPageMap["publicImageUrl"])
+
+    @Suppress("UNCHECKED_CAST")
+    val metadataMap = firstPageMap["designMetadata"] as Map<String, Any?>
+    assertEquals(expectedUrl, metadataMap["publicImageUrl"])
   }
 }
