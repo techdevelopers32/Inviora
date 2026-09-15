@@ -360,24 +360,31 @@ class ExampleUnitTest {
 
   @Test
   fun testFirestorePublishingDtoMappingAndPageFiltering() {
-    val designMehndi = DesignTemplateEntity(
-      id = "dsg_mehndi",
-      name = "Mehndi Velvet",
-      imagePath = "/data/user/0/com.aistudio.inviora.qxmr/files/designs/local_only.jpg",
-      accentColorHex = "#C89D3C",
-      fontStyle = "Calligraphic",
-      themeStyle = "MEHNDI_GOLD",
-      ornamentStyle = "HENNA_PATTERNS"
-    )
-    val designWalima = DesignTemplateEntity(
-      id = "dsg_walima",
-      name = "Emerald Royale",
-      imagePath = "/data/user/0/com.aistudio.inviora.qxmr/files/designs/local_emerald.jpg",
-      accentColorHex = "#0F3D29",
-      fontStyle = "Serif",
-      themeStyle = "ROYAL_EMERALD",
-      ornamentStyle = "ROYAL_BORDER"
-    )
+    val tempMehndi = java.io.File.createTempFile("test_mehndi", ".jpg")
+    val tempWalima = java.io.File.createTempFile("test_walima", ".jpg")
+    try {
+      val bmp = android.graphics.Bitmap.createBitmap(100, 100, android.graphics.Bitmap.Config.ARGB_8888)
+      java.io.FileOutputStream(tempMehndi).use { bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, it) }
+      java.io.FileOutputStream(tempWalima).use { bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, it) }
+
+      val designMehndi = DesignTemplateEntity(
+        id = "dsg_mehndi",
+        name = "Mehndi Velvet",
+        imagePath = tempMehndi.absolutePath,
+        accentColorHex = "#C89D3C",
+        fontStyle = "Calligraphic",
+        themeStyle = "MEHNDI_GOLD",
+        ornamentStyle = "HENNA_PATTERNS"
+      )
+      val designWalima = DesignTemplateEntity(
+        id = "dsg_walima",
+        name = "Emerald Royale",
+        imagePath = tempWalima.absolutePath,
+        accentColorHex = "#0F3D29",
+        fontStyle = "Serif",
+        themeStyle = "ROYAL_EMERALD",
+        ornamentStyle = "ROYAL_BORDER"
+      )
 
     val designsMap = mapOf(
       designMehndi.id to designMehndi,
@@ -537,6 +544,10 @@ class ExampleUnitTest {
     assertNotNull(firestoreMap["pages"])
     val pagesList = firestoreMap["pages"] as List<*>
     assertEquals(2, pagesList.size)
+    } finally {
+      tempMehndi.delete()
+      tempWalima.delete()
+    }
   }
 
   @Test
@@ -794,5 +805,152 @@ class ExampleUnitTest {
     val result = repository.publishAndGetShareUrl("evt_wedding", "gst_test")
     assertTrue(result.isFailure)
     assertFalse(publishAttempted)
+  }
+
+  @Test
+  fun testBuiltInDesignResolvesToGitHubPagesHttpsUrl() {
+    val royalGold = DesignTemplateEntity(
+      id = "design_royal_gold",
+      name = "Royal Gold Heritage",
+      referenceDrawable = "ref_royal_card"
+    )
+    val botanical = DesignTemplateEntity(
+      id = "design_botanical_cream",
+      name = "Botanical Cream Atelier",
+      referenceDrawable = "ref_botanical_card"
+    )
+    val noirLuxe = DesignTemplateEntity(
+      id = "design_noir_luxe",
+      name = "Obsidian Noir Luxe",
+      referenceDrawable = "ref_palace_doors"
+    )
+
+    assertEquals(
+      "https://techdevelopers32.github.io/Inviora/assets/designs/ref_royal_card.jpg",
+      FirestorePublishingRepository.resolvePublicImageUrl(royalGold, royalGold.id)
+    )
+    assertEquals(
+      "https://techdevelopers32.github.io/Inviora/assets/designs/ref_botanical_card.jpg",
+      FirestorePublishingRepository.resolvePublicImageUrl(botanical, botanical.id)
+    )
+    assertEquals(
+      "https://techdevelopers32.github.io/Inviora/assets/designs/ref_palace_doors.jpg",
+      FirestorePublishingRepository.resolvePublicImageUrl(noirLuxe, noirLuxe.id)
+    )
+  }
+
+  @Test
+  fun testCustomDesignWithValidLocalImageResolvesToDataUri() {
+    val tempFile = java.io.File.createTempFile("test_mehndi_gold", ".jpg")
+    try {
+      val bitmap = android.graphics.Bitmap.createBitmap(200, 300, android.graphics.Bitmap.Config.ARGB_8888)
+      java.io.FileOutputStream(tempFile).use { out ->
+        bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, out)
+      }
+
+      val customDesign = DesignTemplateEntity(
+        id = "design_480e1ba1",
+        name = "Mehndi Gold 1",
+        referenceDrawable = "",
+        imagePath = tempFile.absolutePath
+      )
+
+      val resolvedUrl = FirestorePublishingRepository.resolvePublicImageUrl(customDesign, customDesign.id)
+      assertTrue("Resolved URL must be a Base64 Data URI", resolvedUrl.startsWith("data:image/jpeg;base64,"))
+      assertTrue("Resolved URL must contain Base64 payload", resolvedUrl.length > 50)
+      assertFalse("Must NOT fall back to catalog image", resolvedUrl.contains("ref_royal_card"))
+    } finally {
+      tempFile.delete()
+    }
+  }
+
+  @Test
+  fun testCustomDesignWithMissingImageFailsWithoutCatalogFallback() {
+    val customDesign = DesignTemplateEntity(
+      id = "design_480e1ba1",
+      name = "Mehndi Gold 1",
+      referenceDrawable = "",
+      imagePath = "/data/user/0/com.aistudio.inviora.qxmr/files/designs/missing_design_1789389955624.jpg"
+    )
+
+    var thrown = false
+    try {
+      FirestorePublishingRepository.resolvePublicImageUrl(customDesign, customDesign.id)
+    } catch (e: java.io.FileNotFoundException) {
+      thrown = true
+      assertTrue(e.message?.contains("missing_design_1789389955624.jpg") == true)
+    }
+
+    assertTrue("Must throw FileNotFoundException when custom file is missing", thrown)
+  }
+
+  @Test
+  fun testBuildPublishedInvitationDtoWithCustomDesignProducesDataUriInMap() {
+    val tempFile = java.io.File.createTempFile("test_custom_card", ".jpg")
+    try {
+      val bitmap = android.graphics.Bitmap.createBitmap(150, 150, android.graphics.Bitmap.Config.ARGB_8888)
+      java.io.FileOutputStream(tempFile).use { out ->
+        bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, out)
+      }
+
+      val customDesign = DesignTemplateEntity(
+        id = "design_480e1ba1",
+        name = "Mehndi Gold 1",
+        referenceDrawable = "",
+        imagePath = tempFile.absolutePath
+      )
+
+      val event = EventEntity(
+        id = "evt_wedding",
+        title = "Ali & Fatima Wedding",
+        eventType = "Wedding",
+        groomName = "Ali",
+        brideName = "Fatima",
+        designId = "design_480e1ba1",
+        pagesJson = EventPage.listToJson(
+          listOf(
+            EventPage(
+              id = "page_mehndi",
+              eventId = "evt_wedding",
+              pageName = "Mehndi",
+              designId = "design_480e1ba1"
+            )
+          )
+        )
+      )
+
+      val guest = GuestEntity(
+        id = "gst_1",
+        eventId = "evt_wedding",
+        name = "Zayd Khan",
+        uniqueToken = "8Cbeqy"
+      )
+
+      val daos = createFakeDaos()
+      val publishingRepo = FirestorePublishingRepository(
+        eventDao = daos.eventDao,
+        guestDao = daos.guestDao,
+        designDao = daos.designDao
+      )
+
+      val dto = publishingRepo.buildPublishedInvitationDto(
+        event = event,
+        guest = guest,
+        allDesignsMap = mapOf("design_480e1ba1" to customDesign)
+      )
+
+      val pageDto = dto.pages.first()
+      assertTrue(pageDto.publicImageUrl.startsWith("data:image/jpeg;base64,"))
+      assertTrue(pageDto.designMetadata.publicImageUrl.startsWith("data:image/jpeg;base64,"))
+
+      val map = dto.toMap()
+      @Suppress("UNCHECKED_CAST")
+      val pagesList = map["pages"] as List<Map<String, Any?>>
+      val firstPageMap = pagesList.first()
+      val mapPublicImageUrl = firstPageMap["publicImageUrl"] as String
+      assertTrue(mapPublicImageUrl.startsWith("data:image/jpeg;base64,"))
+    } finally {
+      tempFile.delete()
+    }
   }
 }

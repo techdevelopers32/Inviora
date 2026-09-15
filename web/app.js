@@ -103,6 +103,9 @@ function getDesignArtwork(page, designMetadata) {
   let url = (page && page.publicImageUrl) || (designMetadata && designMetadata.publicImageUrl);
   if (url && typeof url === 'string' && url.trim()) {
     url = url.trim();
+    if (url.startsWith('data:')) {
+      return url;
+    }
     const baseUrl = getAssetBaseUrl();
     // If not running directly on the production host or if running under /web/ or localhost,
     // adapt /assets/designs/ references to the current base path
@@ -334,6 +337,9 @@ function buildResolvedLayers(invitation, page) {
         const x = (def.id === 'guest_name') ? def.xPercent : (custom.xPercent ?? def.xPercent);
         const y = (def.id === 'guest_name') ? def.yPercent : (custom.yPercent ?? def.yPercent);
         const size = (def.id === 'guest_name') ? def.fontSizeSp : (custom.fontSizeSp ?? def.fontSizeSp);
+        const isVis = (def.id === 'guest_name')
+          ? def.isVisible
+          : (custom.isVisible !== undefined ? custom.isVisible : def.isVisible);
 
         return {
           ...def,
@@ -344,7 +350,7 @@ function buildResolvedLayers(invitation, page) {
           fontStyle: custom.fontStyle ?? def.fontStyle,
           colorHex: custom.colorHex ?? def.colorHex,
           alignment: custom.alignment ?? def.alignment,
-          isVisible: custom.isVisible !== undefined ? custom.isVisible : def.isVisible
+          isVisible: isVis
         };
       });
     } catch (e) {

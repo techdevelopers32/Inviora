@@ -8,10 +8,85 @@ import android.util.Base64
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileNotFoundException
 import java.io.InputStream
 import kotlin.math.max
 
 object ImageUtils {
+
+  /**
+   * Reads a local image file, safely downsamples it if necessary so max(width, height) <= maxDimension,
+   * compresses it as JPEG with the specified quality (default 82), and returns a Base64 Data URI:
+   * "data:image/jpeg;base64,<BASE64_DATA>"
+   * Throws FileNotFoundException or IllegalArgumentException if the file is missing, empty, or unreadable.
+   * Avoids loading unnecessarily large bitmaps into memory and never substitutes a placeholder image.
+   */
+  fun encodeFileToDataUri(
+    file: File,
+    maxDimension: Int = 1280,
+    quality: Int = 82
+  ): String {
+    if (!file.exists() || !file.isFile) {
+      throw FileNotFoundException("Image file does not exist: ${file.absolutePath}")
+    }
+    if (file.length() == 0L) {
+      throw IllegalArgumentException("Image file is empty: ${file.absolutePath}")
+    }
+
+    val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeFile(file.absolutePath, boundsOptions)
+
+    val rawWidth = boundsOptions.outWidth
+    val rawHeight = boundsOptions.outHeight
+    if (rawWidth <= 0 || rawHeight <= 0) {
+      throw IllegalArgumentException("Failed to decode image bounds from: ${file.absolutePath}")
+    }
+
+    var sampleSize = 1
+    val maxSide = max(rawWidth, rawHeight)
+    while (maxSide / (sampleSize * 2) >= maxDimension) {
+      sampleSize *= 2
+    }
+
+    val decodeOptions = BitmapFactory.Options().apply {
+      inSampleSize = sampleSize
+    }
+
+    val decodedBitmap = BitmapFactory.decodeFile(file.absolutePath, decodeOptions)
+      ?: throw IllegalArgumentException("Failed to decode bitmap from: ${file.absolutePath}")
+
+    // Downscale precisely if still larger than maxDimension
+    val scaledBitmap = if (decodedBitmap.width > maxDimension || decodedBitmap.height > maxDimension) {
+      val ratio = maxDimension.toFloat() / max(decodedBitmap.width, decodedBitmap.height)
+      val targetWidth = (decodedBitmap.width * ratio).toInt().coerceAtLeast(1)
+      val targetHeight = (decodedBitmap.height * ratio).toInt().coerceAtLeast(1)
+      val scaled = Bitmap.createScaledBitmap(decodedBitmap, targetWidth, targetHeight, true)
+      if (scaled != decodedBitmap) {
+        decodedBitmap.recycle()
+      }
+      scaled
+    } else {
+      decodedBitmap
+    }
+
+    val outputStream = ByteArrayOutputStream()
+    val success = scaledBitmap.compress(Bitmap.CompressFormat.JPEG, quality.coerceIn(1, 100), outputStream)
+    scaledBitmap.recycle()
+
+    if (!success) {
+      throw IllegalStateException("Failed to compress image to JPEG format")
+    }
+
+    val bytes = outputStream.toByteArray()
+    val base64 = try {
+      Base64.encodeToString(bytes, Base64.NO_WRAP)
+    } catch (e: Throwable) {
+      java.util.Base64.getEncoder().encodeToString(bytes)
+    }
+
+    return "data:image/jpeg;base64,$base64"
+  }
 
   /**
    * Reads an image Uri, resizes it down if larger than maxDimension to keep requests fast and reliable,

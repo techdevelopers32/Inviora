@@ -263,6 +263,11 @@ data class DesignTemplateEntity(
   val createdAt: Long = System.currentTimeMillis()
 )
 
+val BUILT_IN_DESIGN_IDS = setOf("design_royal_gold", "design_botanical_cream", "design_noir_luxe")
+
+val DesignTemplateEntity.isCustom: Boolean
+  get() = id !in BUILT_IN_DESIGN_IDS || (referenceDrawable.isBlank() && imagePath.isNotBlank())
+
 @Entity(tableName = "animation_experiences")
 data class AnimationExperienceEntity(
   @PrimaryKey val id: String,

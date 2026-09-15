@@ -3,14 +3,18 @@ package com.example.data.repository
 import com.example.data.dao.DesignDao
 import com.example.data.dao.EventDao
 import com.example.data.dao.GuestDao
+import com.example.data.model.BUILT_IN_DESIGN_IDS
 import com.example.data.model.DesignTemplateEntity
 import com.example.data.model.EventEntity
 import com.example.data.model.EventPage
 import com.example.data.model.GuestEntity
 import com.example.data.model.PageGuestStyle
+import com.example.data.model.isCustom
+import com.example.util.ImageUtils
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import java.io.File
+import java.io.FileNotFoundException
 import kotlinx.coroutines.tasks.await
 
 /**
@@ -241,25 +245,42 @@ open class FirestorePublishingRepository(
     const val GITHUB_PAGES_ASSETS_BASE_URL = "https://techdevelopers32.github.io/Inviora/assets/designs"
 
     /**
-     * Resolves the public GitHub Pages image URL for a design template.
-     * Dynamic across all existing design templates (by referenceDrawable, imagePath, or designId).
+     * Resolves the public image URL for a design template:
+     * - Built-in catalog designs: returns the HTTPS GitHub Pages CDN URL.
+     * - Custom uploaded designs: reads the local Android File, downsamples and compresses to JPEG,
+     *   and returns a Base64 Data URI ("data:image/jpeg;base64,...").
+     * Throws an exception if a custom design file is missing, never substituting a catalog placeholder.
      */
     fun resolvePublicImageUrl(design: DesignTemplateEntity?, effectiveDesignId: String): String {
+      val isCustom = (design != null && design.isCustom) ||
+          (design == null && effectiveDesignId.isNotBlank() && effectiveDesignId !in BUILT_IN_DESIGN_IDS)
+
+      if (isCustom) {
+        if (design == null) {
+          throw IllegalStateException("Custom design template '$effectiveDesignId' was not found in the local database.")
+        }
+        if (design.imagePath.isBlank()) {
+          throw IllegalStateException("Custom design '${design.name}' (${design.id}) has no local image path configured.")
+        }
+        val file = File(design.imagePath)
+        if (!file.exists() || !file.isFile) {
+          throw FileNotFoundException("Custom design image file not found on device: ${design.imagePath} for design '${design.name}' (${design.id})")
+        }
+        return ImageUtils.encodeFileToDataUri(file)
+      }
+
+      // Built-in catalog designs
       val filename = when {
         design != null && design.referenceDrawable.isNotBlank() -> {
           val ref = design.referenceDrawable
           if (ref.endsWith(".jpg") || ref.endsWith(".png") || ref.endsWith(".webp")) ref else "$ref.jpg"
-        }
-        design != null && design.imagePath.isNotBlank() -> {
-          val name = File(design.imagePath).name
-          if (name.isNotBlank()) name else "${design.id}.jpg"
         }
         effectiveDesignId.isNotBlank() -> {
           when (effectiveDesignId) {
             "design_royal_gold" -> "ref_royal_card.jpg"
             "design_botanical_cream" -> "ref_botanical_card.jpg"
             "design_noir_luxe" -> "ref_palace_doors.jpg"
-            else -> "$effectiveDesignId.jpg"
+            else -> "ref_royal_card.jpg"
           }
         }
         else -> "ref_royal_card.jpg"
