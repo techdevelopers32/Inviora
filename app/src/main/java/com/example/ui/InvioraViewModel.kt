@@ -1,6 +1,7 @@
 package com.example.ui
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ai.EditedDesignResult
@@ -76,6 +77,24 @@ class InvioraViewModel(application: Application) : AndroidViewModel(application)
       SharingStarted.WhileSubscribed(5000),
       0
     )
+
+    // Ensure Firebase Anonymous Authentication is ready in background.
+    // If already authenticated, the existing anonymous UID is retained and reused.
+    // If not authenticated, signs in anonymously.
+    // Any error is caught safely without affecting local Room database operations or app UI.
+    viewModelScope.launch {
+      try {
+        repository.ensureAuthenticated()
+          .onSuccess { uid ->
+            Log.d("InvioraViewModel", "Firebase anonymous authentication initialized: $uid")
+          }
+          .onFailure { error ->
+            Log.w("InvioraViewModel", "Firebase anonymous authentication deferred/failed safely: ${error.message}")
+          }
+      } catch (e: Throwable) {
+        Log.w("InvioraViewModel", "Safe startup auth catch: ${e.message}")
+      }
+    }
   }
 
   // Current active event flow
@@ -340,4 +359,14 @@ class InvioraViewModel(application: Application) : AndroidViewModel(application)
 
   suspend fun getPublishedInvitation(uniqueToken: String): Result<Map<String, Any?>?> =
     repository.getPublishedInvitation(uniqueToken)
+
+  /**
+   * Connects the guest share flow to Firestore publishing:
+   * 1. Ensures Firebase anonymous authentication is available.
+   * 2. Publishes the guest's invitation to Firestore (publishedInvitations/{uniqueToken}).
+   * 3. Generates and returns the guest-specific web invitation URL reusing the existing uniqueToken.
+   * 4. Returns failure if publishing or authentication fails so no invalid URL is shared.
+   */
+  suspend fun publishAndGetShareUrl(eventId: String, guestId: String): Result<String> =
+    repository.publishAndGetShareUrl(eventId, guestId)
 }

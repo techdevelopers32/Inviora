@@ -280,6 +280,9 @@ fun InvioraApp(viewModel: InvioraViewModel) {
                         val dsg = allDesigns.firstOrNull { it.id == evt.designId } ?: currentDesign
                         val anm = allAnimations.firstOrNull { it.id == evt.animationId } ?: currentAnimation
                         currentScreen = AppScreen.GuestExperience(evt, guest, dsg, anm)
+                      },
+                      onShareGuest = { guest, evt ->
+                        viewModel.publishAndGetShareUrl(evt.id, guest.id)
                       }
                     )
                   }

@@ -134,11 +134,13 @@ fun GuestsScreen(
   onRegenerateToken: (String) -> Unit,
   onDeleteGuest: (GuestEntity) -> Unit,
   onTestGuestExperience: (GuestEntity, EventEntity) -> Unit,
+  onShareGuest: (suspend (GuestEntity, EventEntity) -> Result<String>)? = null,
   modifier: Modifier = Modifier
 ) {
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
 
+  var isPublishingGuestId by remember { mutableStateOf<String?>(null) }
   var isAddingGuest by remember { mutableStateOf(false) }
   var editingGuest by remember { mutableStateOf<GuestEntity?>(null) }
   var isBatchGenerating by remember { mutableStateOf(false) }
@@ -172,14 +174,39 @@ fun GuestsScreen(
     Toast.makeText(context, "Link copied to clipboard", Toast.LENGTH_SHORT).show()
   }
 
-  fun shareViaWhatsApp(guest: GuestEntity, event: EventEntity) {
-    val link = "https://techdevelopers32.github.io/Inviora/invite/${guest.uniqueToken}"
-    val message = "Dear ${guest.name},\n\nWe are delighted to invite you to celebrate ${event.title}.\n\nPlease open your invitation here:\n$link"
-    val intent = Intent(Intent.ACTION_SEND).apply {
-      type = "text/plain"
-      putExtra(Intent.EXTRA_TEXT, message)
+  fun shareGuestInvitation(guest: GuestEntity, event: EventEntity) {
+    if (isPublishingGuestId != null) return
+    isPublishingGuestId = guest.id
+    scope.launch {
+      try {
+        val shareUrlResult = onShareGuest?.invoke(guest, event)
+          ?: Result.success("https://techdevelopers32.github.io/Inviora/invite/${guest.uniqueToken}")
+
+        if (shareUrlResult.isSuccess) {
+          val link = shareUrlResult.getOrThrow()
+          val message = "Dear ${guest.name},\n\nWe are delighted to invite you to celebrate ${event.title}.\n\nPlease open your invitation here:\n$link"
+          val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, message)
+          }
+          context.startActivity(Intent.createChooser(intent, "Share Invitation via"))
+        } else {
+          Toast.makeText(
+            context,
+            "Unable to publish invitation. Please check your connection and try again.",
+            Toast.LENGTH_LONG
+          ).show()
+        }
+      } catch (e: Exception) {
+        Toast.makeText(
+          context,
+          "Unable to publish invitation. Please check your connection and try again.",
+          Toast.LENGTH_LONG
+        ).show()
+      } finally {
+        isPublishingGuestId = null
+      }
     }
-    context.startActivity(Intent.createChooser(intent, "Share Invitation via"))
   }
 
   Column(
@@ -488,16 +515,28 @@ fun GuestsScreen(
                 verticalAlignment = Alignment.CenterVertically
               ) {
                 // WhatsApp Share
+                val isPublishing = isPublishingGuestId == guest.id
                 OutlinedButton(
-                  onClick = { shareViaWhatsApp(guest, currentEvent) },
+                  onClick = { shareGuestInvitation(guest, currentEvent) },
+                  enabled = isPublishingGuestId == null,
                   colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF2E7D32)),
                   border = androidx.compose.foundation.BorderStroke(0.6.dp, Color(0xFF2E7D32)),
                   shape = RoundedCornerShape(6.dp),
                   modifier = Modifier.height(30.dp).testTag("whatsapp_share_button")
                 ) {
-                  Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(12.dp))
-                  Spacer(modifier = Modifier.width(4.dp))
-                  Text("Share", fontSize = 10.sp)
+                  if (isPublishing) {
+                    CircularProgressIndicator(
+                      modifier = Modifier.size(12.dp),
+                      strokeWidth = 1.5.dp,
+                      color = Color(0xFF2E7D32)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Sharing...", fontSize = 10.sp)
+                  } else {
+                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(12.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Share", fontSize = 10.sp)
+                  }
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))

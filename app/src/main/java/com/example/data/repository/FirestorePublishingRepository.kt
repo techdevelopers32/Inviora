@@ -10,6 +10,7 @@ import com.example.data.model.GuestEntity
 import com.example.data.model.PageGuestStyle
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import java.io.File
 import kotlinx.coroutines.tasks.await
 
 /**
@@ -56,7 +57,8 @@ data class PublishedDesignMetadataDto(
   val accentColorHex: String,
   val fontStyle: String,
   val themeStyle: String,
-  val ornamentStyle: String
+  val ornamentStyle: String,
+  val publicImageUrl: String = ""
 ) {
   fun toMap(): Map<String, Any?> = mapOf(
     "designId" to designId,
@@ -64,7 +66,8 @@ data class PublishedDesignMetadataDto(
     "accentColorHex" to accentColorHex,
     "fontStyle" to fontStyle,
     "themeStyle" to themeStyle,
-    "ornamentStyle" to ornamentStyle
+    "ornamentStyle" to ornamentStyle,
+    "publicImageUrl" to publicImageUrl
   )
 }
 
@@ -133,7 +136,8 @@ data class PublishedPageDto(
   val textLayoutJson: String,
   val pageGuestSettings: PublishedPageGuestSettingsDto,
   val guestOverride: PublishedGuestOverrideDto,
-  val designMetadata: PublishedDesignMetadataDto
+  val designMetadata: PublishedDesignMetadataDto,
+  val publicImageUrl: String = ""
 ) {
   fun toMap(): Map<String, Any?> = mapOf(
     "pageId" to pageId,
@@ -152,7 +156,8 @@ data class PublishedPageDto(
     "textLayoutJson" to textLayoutJson,
     "pageGuestSettings" to pageGuestSettings.toMap(),
     "guestOverride" to guestOverride.toMap(),
-    "designMetadata" to designMetadata.toMap()
+    "designMetadata" to designMetadata.toMap(),
+    "publicImageUrl" to publicImageUrl
   )
 }
 
@@ -225,7 +230,7 @@ data class PublishEventResult(
  * Repository responsible for synchronizing/publishing invitations from Room to Cloud Firestore.
  * Room remains the local single source of truth for all editing.
  */
-class FirestorePublishingRepository(
+open class FirestorePublishingRepository(
   private val eventDao: EventDao,
   private val guestDao: GuestDao,
   private val designDao: DesignDao,
@@ -233,6 +238,34 @@ class FirestorePublishingRepository(
 ) {
   companion object {
     const val COLLECTION_PUBLISHED_INVITATIONS = "publishedInvitations"
+    const val GITHUB_PAGES_ASSETS_BASE_URL = "https://techdevelopers32.github.io/Inviora/assets/designs"
+
+    /**
+     * Resolves the public GitHub Pages image URL for a design template.
+     * Dynamic across all existing design templates (by referenceDrawable, imagePath, or designId).
+     */
+    fun resolvePublicImageUrl(design: DesignTemplateEntity?, effectiveDesignId: String): String {
+      val filename = when {
+        design != null && design.referenceDrawable.isNotBlank() -> {
+          val ref = design.referenceDrawable
+          if (ref.endsWith(".jpg") || ref.endsWith(".png") || ref.endsWith(".webp")) ref else "$ref.jpg"
+        }
+        design != null && design.imagePath.isNotBlank() -> {
+          val name = File(design.imagePath).name
+          if (name.isNotBlank()) name else "${design.id}.jpg"
+        }
+        effectiveDesignId.isNotBlank() -> {
+          when (effectiveDesignId) {
+            "design_royal_gold" -> "ref_royal_card.jpg"
+            "design_botanical_cream" -> "ref_botanical_card.jpg"
+            "design_noir_luxe" -> "ref_palace_doors.jpg"
+            else -> "$effectiveDesignId.jpg"
+          }
+        }
+        else -> "ref_royal_card.jpg"
+      }
+      return "$GITHUB_PAGES_ASSETS_BASE_URL/$filename"
+    }
   }
 
   /**
@@ -252,6 +285,7 @@ class FirestorePublishingRepository(
     val publishedPages = invitedPages.map { page ->
       val effectiveDesignId = page.designId.ifBlank { event.designId }
       val design = allDesignsMap[effectiveDesignId]
+      val publicImageUrl = resolvePublicImageUrl(design, effectiveDesignId)
 
       val designMetadata = PublishedDesignMetadataDto(
         designId = design?.id ?: effectiveDesignId.ifBlank { "default_design" },
@@ -259,7 +293,8 @@ class FirestorePublishingRepository(
         accentColorHex = design?.accentColorHex ?: "#D4AF37",
         fontStyle = design?.fontStyle ?: "Serif Calligraphic",
         themeStyle = design?.themeStyle ?: "ROYAL_GOLD",
-        ornamentStyle = design?.ornamentStyle ?: "FLORAL_CORNER"
+        ornamentStyle = design?.ornamentStyle ?: "FLORAL_CORNER",
+        publicImageUrl = publicImageUrl
       )
 
       val hasPageOverride = guestOverridesMap.containsKey(page.id)
@@ -307,7 +342,8 @@ class FirestorePublishingRepository(
         textLayoutJson = page.textLayoutJson,
         pageGuestSettings = pageGuestSettings,
         guestOverride = guestOverride,
-        designMetadata = designMetadata
+        designMetadata = designMetadata,
+        publicImageUrl = publicImageUrl
       )
     }
 
@@ -357,7 +393,7 @@ class FirestorePublishingRepository(
   /**
    * Publishes or updates a single guest invitation document in Firestore under publishedInvitations/{uniqueToken}.
    */
-  suspend fun publishInvitation(eventId: String, guestId: String): Result<PublishResult> {
+  open suspend fun publishInvitation(eventId: String, guestId: String): Result<PublishResult> {
     return try {
       val event = eventDao.getEventById(eventId)
         ?: return Result.failure(IllegalArgumentException("Event with ID '$eventId' not found in local database."))

@@ -85,21 +85,11 @@ function getAssetBaseUrl() {
 }
 
 /**
- * 2. Design Image & Artwork Provider (Temporary Test-Image Isolation)
- * Keeps design-image retrieval completely isolated.
- * Ready to receive Firebase Storage URLs in future steps without refactoring.
+ * 2. Design Image & Artwork Provider
+ * Dynamically resolves publicImageUrl (GitHub Pages asset: /assets/designs/<file>)
+ * or falls back safely to luxury vector SVG artwork if missing or unresolvable.
  */
-function getDesignArtwork(page, designMetadata) {
-  // Production hook: If public web URL or Firebase Storage URL is present in the published page:
-  if (page && page.publicImageUrl) {
-    return page.publicImageUrl;
-  }
-  if (designMetadata && designMetadata.publicImageUrl) {
-    return designMetadata.publicImageUrl;
-  }
-
-  // Temporary test-image fallback:
-  // Returns luxury vector SVG background matching the ceremony/design theme style
+function getFallbackDesignArtwork(designMetadata) {
   const theme = (designMetadata && designMetadata.themeStyle) ? designMetadata.themeStyle.toUpperCase() : 'ROYAL_GOLD';
   const baseUrl = getAssetBaseUrl();
 
@@ -107,6 +97,25 @@ function getDesignArtwork(page, designMetadata) {
     return `${baseUrl}assets/luxury_bg_emerald.svg`;
   }
   return `${baseUrl}assets/luxury_bg_gold.svg`;
+}
+
+function getDesignArtwork(page, designMetadata) {
+  let url = (page && page.publicImageUrl) || (designMetadata && designMetadata.publicImageUrl);
+  if (url && typeof url === 'string' && url.trim()) {
+    url = url.trim();
+    const baseUrl = getAssetBaseUrl();
+    // If not running directly on the production host or if running under /web/ or localhost,
+    // adapt /assets/designs/ references to the current base path
+    if (url.includes('/assets/designs/')) {
+      const filename = url.substring(url.lastIndexOf('/') + 1);
+      if (!window.location.origin.includes('techdevelopers32.github.io')) {
+        return `${baseUrl}assets/designs/${filename}`;
+      }
+    }
+    return url;
+  }
+
+  return getFallbackDesignArtwork(designMetadata);
 }
 
 /**
@@ -366,6 +375,13 @@ function renderPageCard(pageIndex) {
 
   // Set background artwork
   const artworkUrl = getDesignArtwork(page, page.designMetadata);
+  artworkElement.onerror = function() {
+    console.warn("Design artwork failed to load:", this.src, "falling back to SVG texture");
+    const fallback = getFallbackDesignArtwork(page.designMetadata);
+    if (this.src !== fallback) {
+      this.src = fallback;
+    }
+  };
   artworkElement.src = artworkUrl;
   artworkElement.alt = page.pageName || 'Invitation Card Artwork';
 

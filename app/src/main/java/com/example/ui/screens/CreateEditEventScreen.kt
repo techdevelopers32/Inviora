@@ -66,6 +66,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -1076,6 +1077,8 @@ private fun PageEditorDialog(
                 horizontalArrangement = Arrangement.SpaceBetween
               ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                  val context = LocalContext.current
+                  val hasCurrentImg = currentDesign != null && (currentDesign.imagePath.isNotBlank() || currentDesign.referenceDrawable.isNotBlank())
                   Box(
                     modifier = Modifier
                       .size(48.dp)
@@ -1083,10 +1086,21 @@ private fun PageEditorDialog(
                       .background(IvorySurfaceLight),
                     contentAlignment = Alignment.Center
                   ) {
-                    if (currentDesign?.imagePath?.isNotBlank() == true) {
-                      val f = File(currentDesign.imagePath)
+                    if (hasCurrentImg) {
+                      val f = File(currentDesign!!.imagePath)
+                      val drawableResId = remember(currentDesign.referenceDrawable) {
+                        if (currentDesign.referenceDrawable.isNotBlank()) {
+                          context.resources.getIdentifier(currentDesign.referenceDrawable, "drawable", context.packageName)
+                        } else 0
+                      }
+                      val model: Any = when {
+                        f.exists() -> f
+                        currentDesign.imagePath.isNotBlank() -> currentDesign.imagePath
+                        drawableResId != 0 -> drawableResId
+                        else -> currentDesign.imagePath
+                      }
                       AsyncImage(
-                        model = if (f.exists()) f else currentDesign.imagePath,
+                        model = model,
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
@@ -1414,6 +1428,8 @@ private fun PageEditorDialog(
                   modifier = Modifier.padding(8.dp),
                   horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                  val ctx = LocalContext.current
+                  val hasDesignImg = design.imagePath.isNotBlank() || design.referenceDrawable.isNotBlank()
                   Box(
                     modifier = Modifier
                       .size(90.dp)
@@ -1421,10 +1437,21 @@ private fun PageEditorDialog(
                       .background(IvorySurface),
                     contentAlignment = Alignment.Center
                   ) {
-                    if (design.imagePath.isNotBlank()) {
+                    if (hasDesignImg) {
                       val f = File(design.imagePath)
+                      val drawableResId = remember(design.referenceDrawable) {
+                        if (design.referenceDrawable.isNotBlank()) {
+                          ctx.resources.getIdentifier(design.referenceDrawable, "drawable", ctx.packageName)
+                        } else 0
+                      }
+                      val model: Any = when {
+                        f.exists() -> f
+                        design.imagePath.isNotBlank() -> design.imagePath
+                        drawableResId != 0 -> drawableResId
+                        else -> design.imagePath
+                      }
                       AsyncImage(
-                        model = if (f.exists()) f else design.imagePath,
+                        model = model,
                         contentDescription = design.name,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()

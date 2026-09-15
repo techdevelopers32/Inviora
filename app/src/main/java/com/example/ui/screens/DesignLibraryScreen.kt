@@ -47,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -177,6 +178,8 @@ fun DesignLibraryScreen(
               verticalAlignment = Alignment.CenterVertically
             ) {
               // Artwork Thumbnail
+              val context = LocalContext.current
+              val hasImg = design.imagePath.isNotBlank() || design.referenceDrawable.isNotBlank()
               Box(
                 modifier = Modifier
                   .size(72.dp)
@@ -185,10 +188,21 @@ fun DesignLibraryScreen(
                   .border(0.5.dp, IvoryBorder, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
               ) {
-                if (design.imagePath.isNotBlank()) {
+                if (hasImg) {
                   val file = File(design.imagePath)
+                  val drawableResId = remember(design.referenceDrawable) {
+                    if (design.referenceDrawable.isNotBlank()) {
+                      context.resources.getIdentifier(design.referenceDrawable, "drawable", context.packageName)
+                    } else 0
+                  }
+                  val model: Any = when {
+                    file.exists() -> file
+                    design.imagePath.isNotBlank() -> design.imagePath
+                    drawableResId != 0 -> drawableResId
+                    else -> design.imagePath
+                  }
                   AsyncImage(
-                    model = if (file.exists()) file else design.imagePath,
+                    model = model,
                     contentDescription = design.name,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()

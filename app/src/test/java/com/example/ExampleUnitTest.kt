@@ -7,7 +7,11 @@ import com.example.data.model.GuestEntity
 import com.example.data.model.PageGuestStyle
 import com.example.data.model.TextLayerConfig
 import com.example.data.model.getDefaultGreetingForPage
+import com.example.data.repository.FirebaseAuthRepository
 import com.example.data.repository.FirestorePublishingRepository
+import com.example.data.repository.InvioraRepository
+import com.example.data.repository.PublishResult
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -533,5 +537,262 @@ class ExampleUnitTest {
     assertNotNull(firestoreMap["pages"])
     val pagesList = firestoreMap["pages"] as List<*>
     assertEquals(2, pagesList.size)
+  }
+
+  @Test
+  fun testFirebaseAuthRepositorySuccessfulSignIn() = runTest {
+    var signInCalls = 0
+    val fakeAuthRepo = FirebaseAuthRepository(
+      authProvider = { throw IllegalStateException("Network auth not needed in unit test") },
+      currentUserIdProvider = { null },
+      anonymousSignInAction = {
+        signInCalls++
+        "anon_uid_12345"
+      }
+    )
+
+    assertFalse(fakeAuthRepo.isAuthenticated())
+    val result = fakeAuthRepo.ensureAuthenticated()
+    assertTrue(result.isSuccess)
+    assertEquals("anon_uid_12345", result.getOrNull())
+    assertEquals(1, signInCalls)
+  }
+
+  @Test
+  fun testFirebaseAuthRepositoryReusesExistingUser() = runTest {
+    var signInCalls = 0
+
+    val fakeAuthRepo = FirebaseAuthRepository(
+      authProvider = { throw IllegalStateException("Network auth not needed in unit test") },
+      currentUserIdProvider = { "existing_persisted_uid_999" },
+      anonymousSignInAction = {
+        signInCalls++
+        "new_anon_uid"
+      }
+    )
+
+    assertTrue(fakeAuthRepo.isAuthenticated())
+    assertEquals("existing_persisted_uid_999", fakeAuthRepo.getCurrentUserId())
+    val result = fakeAuthRepo.ensureAuthenticated()
+    assertTrue(result.isSuccess)
+    assertEquals("existing_persisted_uid_999", result.getOrNull())
+    assertEquals(0, signInCalls)
+  }
+
+  @Test
+  fun testFirebaseAuthRepositoryHandlesFailureGracefully() = runTest {
+    val failingAuthRepo = FirebaseAuthRepository(
+      authProvider = { throw IllegalStateException("Network auth not needed in unit test") },
+      currentUserIdProvider = { null },
+      anonymousSignInAction = {
+        throw RuntimeException("Network timeout communicating with Firebase Auth")
+      }
+    )
+
+    assertFalse(failingAuthRepo.isAuthenticated())
+    val result = failingAuthRepo.ensureAuthenticated()
+    assertTrue(result.isFailure)
+    assertTrue(result.exceptionOrNull()?.message?.contains("Network timeout") == true)
+  }
+
+  @Test
+  fun testShareUrlAndMessageGeneration() {
+    val token = "KzUSUB"
+    val expectedUrl = "https://techdevelopers32.github.io/Inviora/invite/KzUSUB"
+    assertEquals(expectedUrl, InvioraRepository.buildShareUrl(token))
+
+    val message = InvioraRepository.buildShareMessage("Dr. & Mrs. Imran", "Aisha & Daniyal's Wedding", token)
+    assertTrue(message.contains("Dr. & Mrs. Imran"))
+    assertTrue(message.contains("Aisha & Daniyal's Wedding"))
+    assertTrue(message.contains(expectedUrl))
+  }
+
+  private fun createFakeDaos(): DaosFixture {
+    val designDao = object : com.example.data.dao.DesignDao {
+      override fun getAllDesigns() = kotlinx.coroutines.flow.flowOf(emptyList<DesignTemplateEntity>())
+      override suspend fun getAllDesignsList() = emptyList<DesignTemplateEntity>()
+      override suspend fun getDesignById(id: String) = null
+      override fun getDesignFlow(id: String) = kotlinx.coroutines.flow.flowOf(null)
+      override suspend fun insertDesign(design: DesignTemplateEntity) {}
+      override suspend fun updateDesign(design: DesignTemplateEntity) {}
+      override suspend fun deleteDesignById(id: String) {}
+      override suspend fun renameDesign(id: String, newName: String) {}
+      override suspend fun toggleFavorite(id: String, isFav: Boolean) {}
+    }
+    val animationDao = object : com.example.data.dao.AnimationDao {
+      override fun getAllAnimations() = kotlinx.coroutines.flow.flowOf(emptyList<com.example.data.model.AnimationExperienceEntity>())
+      override suspend fun getAllAnimationsList() = emptyList<com.example.data.model.AnimationExperienceEntity>()
+      override suspend fun getAnimationById(id: String) = null
+      override fun getAnimationFlow(id: String) = kotlinx.coroutines.flow.flowOf(null)
+      override suspend fun insertAnimation(animation: com.example.data.model.AnimationExperienceEntity) {}
+      override suspend fun getAnimationCount() = 0
+      override suspend fun toggleFavorite(id: String, isFav: Boolean) {}
+      override suspend fun deleteAnimationById(id: String) {}
+    }
+    val eventDao = object : com.example.data.dao.EventDao {
+      override fun getAllEvents() = kotlinx.coroutines.flow.flowOf(emptyList<EventEntity>())
+      override suspend fun getEventById(id: String) = null
+      override fun getEventFlow(id: String) = kotlinx.coroutines.flow.flowOf(null)
+      override suspend fun getEventsUsingDesign(designId: String) = emptyList<EventEntity>()
+      override suspend fun getEventsUsingAnimation(animationId: String) = emptyList<EventEntity>()
+      override suspend fun insertEvent(event: EventEntity) {}
+      override suspend fun updateEvent(event: EventEntity) {}
+      override suspend fun deleteEventById(id: String) {}
+    }
+    val guestDao = object : com.example.data.dao.GuestDao {
+      override fun getAllGuests() = kotlinx.coroutines.flow.flowOf(emptyList<GuestEntity>())
+      override fun getGuestsForEvent(eventId: String) = kotlinx.coroutines.flow.flowOf(emptyList<GuestEntity>())
+      override suspend fun getGuestsListForEvent(eventId: String) = emptyList<GuestEntity>()
+      override suspend fun getGuestByToken(token: String) = null
+      override fun getGuestCountForEvent(eventId: String) = kotlinx.coroutines.flow.flowOf(0)
+      override fun getTotalGuestCount() = kotlinx.coroutines.flow.flowOf(0)
+      override suspend fun insertGuest(guest: GuestEntity) {}
+      override suspend fun insertGuests(guests: List<GuestEntity>) {}
+      override suspend fun regenerateToken(id: String, newToken: String) {}
+      override suspend fun setGuestActive(id: String, isActive: Boolean) {}
+      override suspend fun deleteGuestById(id: String) {}
+      override suspend fun deleteGuestsForEvent(eventId: String) {}
+    }
+    val preferenceDao = object : com.example.data.dao.PreferenceDao {
+      override suspend fun getPreference(key: String) = null
+      override fun getPreferenceFlow(key: String) = kotlinx.coroutines.flow.flowOf(null)
+      override suspend fun setPreference(pref: com.example.data.model.AppPreferenceEntity) {}
+    }
+    return DaosFixture(designDao, animationDao, eventDao, guestDao, preferenceDao)
+  }
+
+  private data class DaosFixture(
+    val designDao: com.example.data.dao.DesignDao,
+    val animationDao: com.example.data.dao.AnimationDao,
+    val eventDao: com.example.data.dao.EventDao,
+    val guestDao: com.example.data.dao.GuestDao,
+    val preferenceDao: com.example.data.dao.PreferenceDao
+  )
+
+  @Test
+  fun testPublishAndGetShareUrlReusesExistingToken() = runTest {
+    val fixedToken = "KzUSUB"
+    var publishCalls = 0
+
+    val fakeAuthRepo = FirebaseAuthRepository(
+      authProvider = { throw IllegalStateException("Network auth not needed in unit test") },
+      currentUserIdProvider = { "persisted_user_uid_123" }
+    )
+
+    val daos = createFakeDaos()
+    val fakePublishingRepo = object : FirestorePublishingRepository(
+      eventDao = daos.eventDao,
+      guestDao = daos.guestDao,
+      designDao = daos.designDao
+    ) {
+      override suspend fun publishInvitation(eventId: String, guestId: String): Result<PublishResult> {
+        publishCalls++
+        return Result.success(
+          PublishResult(
+            token = fixedToken,
+            guestId = guestId,
+            guestName = "Dr. & Mrs. Imran",
+            isPublished = true,
+            message = "Published successfully"
+          )
+        )
+      }
+    }
+
+    val repository = InvioraRepository(
+      designDao = daos.designDao,
+      animationDao = daos.animationDao,
+      eventDao = daos.eventDao,
+      guestDao = daos.guestDao,
+      preferenceDao = daos.preferenceDao,
+      authRepository = fakeAuthRepo,
+      publishingRepository = fakePublishingRepo
+    )
+
+    // First share attempt: publishes and returns share URL reusing fixed token
+    val firstResult = repository.publishAndGetShareUrl("evt_wedding", "gst_test")
+    assertTrue(firstResult.isSuccess)
+    assertEquals("https://techdevelopers32.github.io/Inviora/invite/KzUSUB", firstResult.getOrNull())
+    assertEquals(1, publishCalls)
+
+    // Second share attempt: reuses the exact same token without generating a new one
+    val secondResult = repository.publishAndGetShareUrl("evt_wedding", "gst_test")
+    assertTrue(secondResult.isSuccess)
+    assertEquals("https://techdevelopers32.github.io/Inviora/invite/KzUSUB", secondResult.getOrNull())
+    assertEquals(2, publishCalls)
+  }
+
+  @Test
+  fun testNoShareUrlWhenPublishingFails() = runTest {
+    val fakeAuthRepo = FirebaseAuthRepository(
+      authProvider = { throw IllegalStateException("Network auth not needed in unit test") },
+      currentUserIdProvider = { "persisted_user_uid_123" }
+    )
+
+    val daos = createFakeDaos()
+    val failingPublishingRepo = object : FirestorePublishingRepository(
+      eventDao = daos.eventDao,
+      guestDao = daos.guestDao,
+      designDao = daos.designDao
+    ) {
+      override suspend fun publishInvitation(eventId: String, guestId: String): Result<PublishResult> {
+        return Result.failure(RuntimeException("Network offline: unable to reach Firestore"))
+      }
+    }
+
+    val repository = InvioraRepository(
+      designDao = daos.designDao,
+      animationDao = daos.animationDao,
+      eventDao = daos.eventDao,
+      guestDao = daos.guestDao,
+      preferenceDao = daos.preferenceDao,
+      authRepository = fakeAuthRepo,
+      publishingRepository = failingPublishingRepo
+    )
+
+    val result = repository.publishAndGetShareUrl("evt_wedding", "gst_test")
+    assertTrue(result.isFailure)
+    assertTrue(result.exceptionOrNull()?.message?.contains("Network offline") == true)
+  }
+
+  @Test
+  fun testNoShareUrlWhenAuthFails() = runTest {
+    var publishAttempted = false
+
+    val failingAuthRepo = FirebaseAuthRepository(
+      authProvider = { throw IllegalStateException("Network auth not needed in unit test") },
+      currentUserIdProvider = { null },
+      anonymousSignInAction = {
+        throw RuntimeException("Auth network failure")
+      }
+    )
+
+    val daos = createFakeDaos()
+    val fakePublishingRepo = object : FirestorePublishingRepository(
+      eventDao = daos.eventDao,
+      guestDao = daos.guestDao,
+      designDao = daos.designDao
+    ) {
+      override suspend fun publishInvitation(eventId: String, guestId: String): Result<PublishResult> {
+        publishAttempted = true
+        return Result.success(
+          PublishResult("token", guestId, "Name", true, "Success")
+        )
+      }
+    }
+
+    val repository = InvioraRepository(
+      designDao = daos.designDao,
+      animationDao = daos.animationDao,
+      eventDao = daos.eventDao,
+      guestDao = daos.guestDao,
+      preferenceDao = daos.preferenceDao,
+      authRepository = failingAuthRepo,
+      publishingRepository = fakePublishingRepo
+    )
+
+    val result = repository.publishAndGetShareUrl("evt_wedding", "gst_test")
+    assertTrue(result.isFailure)
+    assertFalse(publishAttempted)
   }
 }

@@ -18,10 +18,23 @@ class InvioraRepository(
   private val animationDao: AnimationDao,
   private val eventDao: EventDao,
   private val guestDao: GuestDao,
-  private val preferenceDao: PreferenceDao
+  private val preferenceDao: PreferenceDao,
+  val authRepository: FirebaseAuthRepository = FirebaseAuthRepository(),
+  val publishingRepository: FirestorePublishingRepository = FirestorePublishingRepository(
+    eventDao,
+    guestDao,
+    designDao
+  )
 ) {
   companion object {
     const val KEY_CURRENT_EVENT_ID = "current_event_id"
+    const val BASE_INVITATION_URL = "https://techdevelopers32.github.io/Inviora/invite"
+
+    fun buildShareUrl(uniqueToken: String): String =
+      "$BASE_INVITATION_URL/$uniqueToken"
+
+    fun buildShareMessage(guestName: String, eventTitle: String, uniqueToken: String): String =
+      "Dear $guestName,\n\nWe are delighted to invite you to celebrate $eventTitle.\n\nPlease open your invitation here:\n${buildShareUrl(uniqueToken)}"
   }
 
   // --- Designs ---
@@ -125,12 +138,6 @@ class InvioraRepository(
   }
 
   // --- Firestore Invitation Publishing ---
-  val publishingRepository: FirestorePublishingRepository = FirestorePublishingRepository(
-    eventDao,
-    guestDao,
-    designDao
-  )
-
   suspend fun publishInvitation(eventId: String, guestId: String): Result<PublishResult> =
     publishingRepository.publishInvitation(eventId, guestId)
 
@@ -148,4 +155,38 @@ class InvioraRepository(
 
   suspend fun getPublishedInvitation(uniqueToken: String): Result<Map<String, Any?>?> =
     publishingRepository.getPublishedInvitation(uniqueToken)
+
+  /**
+   * Connects the guest share action to Firebase Anonymous Auth and Firestore publishing:
+   * 1. Ensures Firebase anonymous authentication is available via ensureAuthenticated().
+   * 2. Publishes the guest's invitation using FirestorePublishingRepository.publishInvitation.
+   *    (Uses existing GuestEntity.uniqueToken for the Firestore document publishedInvitations/{uniqueToken}).
+   * 3. On success, returns the guest-specific web invitation URL reusing the existing uniqueToken.
+   * 4. If authentication or publishing fails, returns Result.failure without opening a broken share URL.
+   */
+  suspend fun publishAndGetShareUrl(eventId: String, guestId: String): Result<String> {
+    val authResult = ensureAuthenticated()
+    if (authResult.isFailure) {
+      return Result.failure(
+        authResult.exceptionOrNull()
+          ?: IllegalStateException("Unable to publish invitation: authentication failed.")
+      )
+    }
+
+    val publishResult = publishInvitation(eventId, guestId)
+    return if (publishResult.isSuccess) {
+      val result = publishResult.getOrThrow()
+      Result.success(buildShareUrl(result.token))
+    } else {
+      Result.failure(
+        publishResult.exceptionOrNull()
+          ?: IllegalStateException("Unable to publish invitation: publishing failed.")
+      )
+    }
+  }
+
+  // --- Firebase Authentication ---
+  fun isAuthenticated(): Boolean = authRepository.isAuthenticated()
+  fun getCurrentUserId(): String? = authRepository.getCurrentUserId()
+  suspend fun ensureAuthenticated(): Result<String> = authRepository.ensureAuthenticated()
 }

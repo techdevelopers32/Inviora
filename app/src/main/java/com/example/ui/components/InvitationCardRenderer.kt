@@ -65,6 +65,7 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
@@ -270,7 +271,8 @@ fun InvitationPageCard(
   onUpdateLayer: ((TextLayerConfig) -> Unit)? = null,
   modifier: Modifier = Modifier
 ) {
-  val hasUploadedImage = design != null && design.imagePath.isNotBlank()
+  val context = LocalContext.current
+  val hasUploadedImage = design != null && (design.imagePath.isNotBlank() || design.referenceDrawable.isNotBlank())
   val resolvedLayers = remember(page, event, guest, guestName) {
     TextLayerConfig.buildResolvedLayers(event, page, guest, guestName)
   }
@@ -299,8 +301,19 @@ fun InvitationPageCard(
       // 1. PRIMARY VISUAL BACKGROUND: Uploaded design artwork
       if (hasUploadedImage) {
         val imgFile = File(design!!.imagePath)
+        val drawableResId = remember(design.referenceDrawable) {
+          if (design.referenceDrawable.isNotBlank()) {
+            context.resources.getIdentifier(design.referenceDrawable, "drawable", context.packageName)
+          } else 0
+        }
+        val model: Any = when {
+          imgFile.exists() -> imgFile
+          design.imagePath.isNotBlank() -> design.imagePath
+          drawableResId != 0 -> drawableResId
+          else -> design.imagePath
+        }
         AsyncImage(
-          model = if (imgFile.exists()) imgFile else design.imagePath,
+          model = model,
           contentDescription = design.name,
           contentScale = ContentScale.Crop,
           modifier = Modifier
