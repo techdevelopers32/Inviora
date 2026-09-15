@@ -413,7 +413,9 @@ fun GuestsScreen(
                     fontSize = 15.sp,
                     color = CharcoalPrimary
                   )
-                  if (guest.phone.isNotBlank()) {
+                  if (!guest.guestNote.isNullOrBlank()) {
+                    Text(text = "Note: ${guest.guestNote}", fontSize = 11.sp, color = CharcoalMuted)
+                  } else if (guest.phone.isNotBlank()) {
                     Text(text = guest.phone, fontSize = 11.sp, color = CharcoalMuted)
                   }
                   Text(
@@ -613,7 +615,7 @@ fun GuestsScreen(
     val previewPage = if (activePage.designId.isBlank() && activeDesign != null) activePage.copy(designId = activeDesign.id) else activePage
 
     var guestNameInput by remember { mutableStateOf(editingGuest?.name ?: "") }
-    var guestPhoneInput by remember { mutableStateOf(editingGuest?.phone ?: "") }
+    var guestNoteInput by remember { mutableStateOf(editingGuest?.guestNote ?: "") }
 
     var hasCustomOverride by remember { mutableStateOf(editingGuest?.hasCustomStyleOverride ?: false) }
     var saveAsEventDefault by remember { mutableStateOf(!isEditing) }
@@ -692,19 +694,21 @@ fun GuestsScreen(
 
           Spacer(modifier = Modifier.height(8.dp))
 
-          // Phone Field
-          Text("Phone (Optional)", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = CharcoalPrimary)
+          // Guest Note Field (Optional)
+          Text("Guest Note (optional)", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = CharcoalPrimary)
           Spacer(modifier = Modifier.height(4.dp))
           OutlinedTextField(
-            value = guestPhoneInput,
-            onValueChange = { guestPhoneInput = it },
-            placeholder = { Text("e.g. +1 555-0199 (for WhatsApp)") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+            value = guestNoteInput,
+            onValueChange = { guestNoteInput = it },
+            placeholder = { Text("e.g. With family, 2 persons, or special request") },
+            minLines = 2,
+            maxLines = 4,
+            modifier = Modifier.fillMaxWidth().testTag("guest_note_input"),
             colors = OutlinedTextFieldDefaults.colors(
               focusedBorderColor = GoldPrimary,
               unfocusedBorderColor = IvoryBorder
-            )
+            ),
+            shape = RoundedCornerShape(8.dp)
           )
 
           Spacer(modifier = Modifier.height(12.dp))
@@ -931,13 +935,14 @@ fun GuestsScreen(
             contentAlignment = Alignment.Center
           ) {
             val previewGuest = remember(
-              guestNameInput, currentStyle
+              guestNameInput, guestNoteInput, currentStyle
             ) {
               GuestEntity(
                 id = editingGuest?.id ?: "preview_guest_temp",
                 eventId = currentEvent?.id ?: "",
                 name = guestNameInput.ifBlank { "Honored Guest Name" },
-                phone = guestPhoneInput,
+                phone = editingGuest?.phone ?: "",
+                guestNote = guestNoteInput.trim().ifBlank { null },
                 uniqueToken = "PREVIEW",
                 hasCustomStyleOverride = true,
                 guestNameXPercent = currentStyle.xPercent,
@@ -951,6 +956,8 @@ fun GuestsScreen(
               )
             }
 
+            var selectedGuestLayerId by remember { mutableStateOf("guest_name") }
+
             InvitationPageCard(
               page = previewPage,
               design = activeDesign,
@@ -959,7 +966,8 @@ fun GuestsScreen(
               guestName = guestNameInput.ifBlank { "Honored Guest Name" },
               isEditable = true,
               onlyGuestNameEditable = true,
-              selectedLayerId = "guest_name",
+              selectedLayerId = selectedGuestLayerId,
+              onSelectLayer = { selectedGuestLayerId = it },
               onUpdateLayer = { updated ->
                 if (updated.id == "guest_name") {
                   pageStyles[activePage.id] = currentStyle.copy(
@@ -1375,7 +1383,8 @@ fun GuestsScreen(
                 id = editingGuest?.id ?: ("gst_" + UUID.randomUUID().toString().take(8)),
                 eventId = currentEvent.id,
                 name = guestNameInput.trim(),
-                phone = guestPhoneInput.trim(),
+                phone = editingGuest?.phone ?: "",
+                guestNote = guestNoteInput.trim().ifBlank { null },
                 uniqueToken = editingGuest?.uniqueToken ?: generateSecureToken(),
                 active = editingGuest?.active ?: true,
                 selectedSubEventIdsJson = "[]",

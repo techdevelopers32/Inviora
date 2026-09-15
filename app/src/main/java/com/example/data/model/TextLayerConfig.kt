@@ -110,6 +110,8 @@ data class TextLayerConfig(
 
       val actualGuestName = guestName ?: guest?.name
       val guestText = actualGuestName ?: ""
+      val actualGuestNote = guest?.guestNote ?: ""
+      val guestNoteText = actualGuestNote.trim()
       val guestStyle = guest?.getEffectiveStyleForPage(page, event) ?: page.getPageDefaultGuestStyle(event)
 
       // Default baseline layers
@@ -165,7 +167,7 @@ data class TextLayerConfig(
         TextLayerConfig(
           id = "guest_name",
           label = "Guest Name",
-          text = guestText,
+          text = if (guestText.isNotBlank()) guestText else (if (guest == null && guestName == null) "Honored Guest" else ""),
           xPercent = guestStyle.xPercent,
           yPercent = guestStyle.yPercent,
           fontSizeSp = guestStyle.fontSizeSp,
@@ -174,7 +176,21 @@ data class TextLayerConfig(
           alignment = guestStyle.alignment,
           colorHex = guestStyle.colorHex,
           fontFamily = guestStyle.fontFamily,
-          isVisible = guestText.isNotBlank()
+          isVisible = if (guest == null && guestName == null) true else guestText.isNotBlank()
+        ),
+        TextLayerConfig(
+          id = "guest_note",
+          label = "Guest Note",
+          text = if (guestNoteText.isNotBlank()) guestNoteText else (if (guest == null && guestName == null) "Guest Note (e.g. With Family)" else ""),
+          xPercent = guestStyle.xPercent,
+          yPercent = (guestStyle.yPercent + 0.045f).coerceAtMost(0.95f),
+          fontSizeSp = (guestStyle.fontSizeSp - 4).coerceAtLeast(11),
+          fontStyle = "Italic",
+          fontWeight = "Normal",
+          alignment = guestStyle.alignment,
+          colorHex = guestStyle.colorHex,
+          fontFamily = guestStyle.fontFamily,
+          isVisible = if (guest == null && guestName == null) true else guestNoteText.isNotBlank()
         ),
         TextLayerConfig(
           id = "greeting",
@@ -246,7 +262,7 @@ data class TextLayerConfig(
         val userLayer = saved[def.id]
         if (userLayer != null) {
           // Keep current dynamic text unless user explicitly altered it in textLayout
-          val finalTxt = if (userLayer.text.isNotBlank() && def.id != "couple_names" && def.id != "guest_name") {
+          val finalTxt = if (userLayer.text.isNotBlank() && def.id != "couple_names" && def.id != "guest_name" && def.id != "guest_note") {
             userLayer.text
           } else {
             def.text
@@ -263,7 +279,9 @@ data class TextLayerConfig(
           val finalAlignment = if (def.id == "guest_name") guestStyle.alignment else userLayer.alignment
 
           val finalVisibility = if (def.id == "guest_name") {
-            def.text.isNotBlank()
+            if (guest == null && guestName == null) userLayer.isVisible else def.text.isNotBlank()
+          } else if (def.id == "guest_note") {
+            if (guest == null && guestName == null) userLayer.isVisible else (userLayer.isVisible && def.text.isNotBlank())
           } else {
             userLayer.isVisible && def.text.isNotBlank()
           }

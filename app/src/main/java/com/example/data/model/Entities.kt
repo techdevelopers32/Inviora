@@ -381,6 +381,7 @@ data class GuestEntity(
   val eventId: String,
   val name: String,
   val phone: String = "",
+  val guestNote: String? = null,
   val selectedPageIdsJson: String = "[]",
   val selectedSubEventIdsJson: String = "[]",
   val uniqueToken: String,

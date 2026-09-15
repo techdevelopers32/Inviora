@@ -263,6 +263,19 @@ function buildResolvedLayers(invitation, page) {
       isVisible: !!(invitation.guestName && invitation.guestName.trim())
     },
     {
+      id: "guest_note",
+      text: invitation.guestNote || "",
+      xPercent: guestStyle.xPercent,
+      yPercent: Math.min(0.95, guestStyle.yPercent + 0.045),
+      fontSizeSp: Math.max(11, guestStyle.fontSize - 4),
+      fontWeight: "Normal",
+      fontStyle: "Italic",
+      fontFamily: guestStyle.fontFamily?.toLowerCase().includes("sans") ? "'Plus Jakarta Sans', sans-serif" : "'Cormorant Garamond', Georgia, serif",
+      alignment: guestStyle.alignment || "Center",
+      colorHex: guestStyle.colorHex || (isLightText ? "#F7E7A9" : "#8C6D23"),
+      isVisible: !!(invitation.guestNote && invitation.guestNote.trim())
+    },
+    {
       id: "greeting",
       text: resolvedGreeting,
       xPercent: 0.5,
@@ -333,11 +346,20 @@ function buildResolvedLayers(invitation, page) {
         const custom = savedMap[def.id];
         if (!custom) return def;
 
-        // For guest_name, preserve guest layout hierarchy unless overridden
-        const x = (def.id === 'guest_name') ? def.xPercent : (custom.xPercent ?? def.xPercent);
-        const y = (def.id === 'guest_name') ? def.yPercent : (custom.yPercent ?? def.yPercent);
-        const size = (def.id === 'guest_name') ? def.fontSizeSp : (custom.fontSizeSp ?? def.fontSizeSp);
-        const isVis = (def.id === 'guest_name')
+        // For guest_name and guest_note, preserve dynamic guest layout and let text presence determine visibility
+        const x = (def.id === 'guest_name' || def.id === 'guest_note')
+          ? def.xPercent
+          : (custom.xPercent ?? def.xPercent);
+
+        const y = (def.id === 'guest_name' || def.id === 'guest_note')
+          ? def.yPercent
+          : (custom.yPercent ?? def.yPercent);
+
+        const size = (def.id === 'guest_name' || def.id === 'guest_note')
+          ? def.fontSizeSp
+          : (custom.fontSizeSp ?? def.fontSizeSp);
+
+        const isVis = (def.id === 'guest_name' || def.id === 'guest_note')
           ? def.isVisible
           : (custom.isVisible !== undefined ? custom.isVisible : def.isVisible);
 

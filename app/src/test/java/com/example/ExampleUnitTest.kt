@@ -1020,4 +1020,78 @@ class ExampleUnitTest {
     val metadataMap = firstPageMap["designMetadata"] as Map<String, Any?>
     assertEquals(expectedUrl, metadataMap["publicImageUrl"])
   }
+
+  @Test
+  fun testGuestNoteResolvesCorrectlyInTextLayers() {
+    val page = EventPage(
+      id = "page_walima",
+      eventId = "evt_1",
+      pageName = "Walima",
+      designId = "dsg_1",
+      greeting = "Cordially invite you"
+    )
+
+    // 1. Guest with note
+    val guestWithNote = GuestEntity(
+      id = "gst_1",
+      eventId = "evt_1",
+      name = "Mr. & Mrs. Tariq Khan",
+      guestNote = "With family",
+      uniqueToken = "AbCdEf"
+    )
+    val layersWithNote = TextLayerConfig.buildResolvedLayers(null, page, guestWithNote)
+    val noteLayer = layersWithNote.find { it.id == "guest_note" }
+    assertNotNull(noteLayer)
+    assertTrue(noteLayer!!.isVisible)
+    assertEquals("With family", noteLayer.text)
+
+    // 2. Guest without note
+    val guestWithoutNote = GuestEntity(
+      id = "gst_2",
+      eventId = "evt_1",
+      name = "Zayd Ahmed",
+      guestNote = null,
+      uniqueToken = "GhIjKl"
+    )
+    val layersWithoutNote = TextLayerConfig.buildResolvedLayers(null, page, guestWithoutNote)
+    val noNoteLayer = layersWithoutNote.find { it.id == "guest_note" }
+    assertNotNull(noNoteLayer)
+    assertFalse(noNoteLayer!!.isVisible)
+  }
+
+  @Test
+  fun testGuestNoteIsPublishedAndPhoneIsExcluded() {
+    val daos = createFakeDaos()
+    val publishingRepo = FirestorePublishingRepository(
+      eventDao = daos.eventDao,
+      guestDao = daos.guestDao,
+      designDao = daos.designDao
+    )
+
+    val event = EventEntity(
+      id = "evt_test",
+      title = "Celebration",
+      eventType = "Wedding"
+    )
+    val guest = GuestEntity(
+      id = "gst_note_test",
+      eventId = "evt_test",
+      name = "Farhan & Family",
+      phone = "+1 555-9988",
+      guestNote = "Kindly arrive by 6 PM",
+      uniqueToken = "Token123"
+    )
+
+    val dto = publishingRepo.buildPublishedInvitationDto(
+      event = event,
+      guest = guest,
+      allDesignsMap = emptyMap()
+    )
+
+    assertEquals("Kindly arrive by 6 PM", dto.guestNote)
+
+    val map = dto.toMap()
+    assertEquals("Kindly arrive by 6 PM", map["guestNote"])
+    assertFalse("Phone must not be in published map", map.containsKey("phone"))
+  }
 }
