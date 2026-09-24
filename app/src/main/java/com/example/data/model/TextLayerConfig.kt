@@ -97,8 +97,9 @@ data class TextLayerConfig(
 
       // Couple / Title text
       val coupleTitle = if (isWedding) {
-        if (!event?.groomName.isNullOrBlank() && !event?.brideName.isNullOrBlank()) {
-          "${event!!.groomName} & ${event.brideName}"
+        val coupleNames = EventDateParser.formatCoupleNames(event?.groomName, event?.brideName)
+        if (coupleNames.isNotBlank()) {
+          coupleNames
         } else if (!event?.title.isNullOrBlank()) {
           event!!.title
         } else {
@@ -113,6 +114,7 @@ data class TextLayerConfig(
       val actualGuestNote = guest?.guestNote ?: ""
       val guestNoteText = actualGuestNote.trim()
       val guestStyle = guest?.getEffectiveStyleForPage(page, event) ?: page.getPageDefaultGuestStyle(event)
+      val derivedDay = EventDateParser.deriveDayOfWeek(page.date)
 
       // Default baseline layers
       val defaults = listOf(
@@ -205,6 +207,18 @@ data class TextLayerConfig(
           isVisible = page.greeting.isNotBlank()
         ),
         TextLayerConfig(
+          id = "day",
+          label = "Day",
+          text = derivedDay,
+          xPercent = 0.5f,
+          yPercent = 0.53f,
+          fontSizeSp = 13,
+          fontWeight = "SemiBold",
+          alignment = "Center",
+          colorHex = "#8C6D23",
+          isVisible = derivedDay.isNotBlank()
+        ),
+        TextLayerConfig(
           id = "date",
           label = "Date",
           text = page.date,
@@ -261,12 +275,8 @@ data class TextLayerConfig(
       return defaults.map { def ->
         val userLayer = saved[def.id]
         if (userLayer != null) {
-          // Keep current dynamic text unless user explicitly altered it in textLayout
-          val finalTxt = if (userLayer.text.isNotBlank() && def.id != "couple_names" && def.id != "guest_name" && def.id != "guest_note") {
-            userLayer.text
-          } else {
-            def.text
-          }
+          // Layer text always comes from current event and page data as source of truth
+          val finalTxt = def.text
 
           // For guest_name, prioritize guest custom styling or page/event defaults
           val finalX = if (def.id == "guest_name") guestStyle.xPercent else userLayer.xPercent

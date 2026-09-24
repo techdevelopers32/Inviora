@@ -122,6 +122,33 @@ function getDesignArtwork(page, designMetadata) {
 }
 
 /**
+ * Derives the full weekday name (e.g., "Saturday") from a given date string.
+ * Returns empty string if the date is null, blank, or cannot be parsed.
+ */
+function deriveDayOfWeek(dateStr) {
+  if (!dateStr || typeof dateStr !== 'string' || !dateStr.trim()) return "";
+  const cleaned = dateStr.trim();
+  // 1. Try native Date parser (ISO YYYY-MM-DD, MMMM DD, YYYY, etc.)
+  let d = new Date(cleaned);
+  if (!isNaN(d.getTime())) {
+    return d.toLocaleDateString('en-US', { weekday: 'long' });
+  }
+  // 2. Try DD MMMM YYYY (e.g. "24 October 2026") or parts
+  const parts = cleaned.split(/[\s,/-]+/);
+  if (parts.length >= 3) {
+    d = new Date(`${parts[1]} ${parts[0]}, ${parts[2]}`);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString('en-US', { weekday: 'long' });
+    }
+    d = new Date(`${parts[0]}-${parts[1]}-${parts[2]}`);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString('en-US', { weekday: 'long' });
+    }
+  }
+  return "";
+}
+
+/**
  * 3. Dynamic Text Positioning Engine
  * Maps normalized percentage coordinates (xPercent, yPercent: 0.0 - 1.0)
  * directly into the CSS container of the card, matching Android InvitationCardRenderer.
@@ -140,11 +167,22 @@ function buildResolvedLayers(invitation, page) {
     ? page.bismillahEnglish 
     : "In the name of Allah, the Most Gracious, the Most Merciful.";
 
+  // Helper for formatting wedding couple names with "with"
+  function formatCoupleNames(groom, bride) {
+    const g = (groom || "").trim();
+    const b = (bride || "").trim();
+    if (g && b) return `${g} with ${b}`;
+    if (g) return g;
+    if (b) return b;
+    return "";
+  }
+
   // Couple / Title text
   let coupleTitle = "";
   if (isWedding) {
-    if (invitation.groomName && invitation.brideName) {
-      coupleTitle = `${invitation.groomName} & ${invitation.brideName}`;
+    const coupleFormatted = formatCoupleNames(invitation.groomName, invitation.brideName);
+    if (coupleFormatted) {
+      coupleTitle = coupleFormatted;
     } else if (invitation.eventTitle) {
       coupleTitle = invitation.eventTitle;
     } else {
@@ -198,6 +236,8 @@ function buildResolvedLayers(invitation, page) {
   } else if (invitation.hostNames && invitation.hostNames.trim()) {
     resolvedGreeting = invitation.hostNames.trim();
   }
+
+  const resolvedDay = (page.day && page.day.trim()) ? page.day.trim() : deriveDayOfWeek(page.date);
 
   // Base default layers matching Android TextLayerConfig.kt
   const defaultLayers = [
@@ -288,6 +328,18 @@ function buildResolvedLayers(invitation, page) {
       isVisible: !!resolvedGreeting
     },
     {
+      id: "day",
+      text: resolvedDay,
+      xPercent: 0.5,
+      yPercent: 0.53,
+      fontSizeSp: 13,
+      fontWeight: "600",
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
+      alignment: "Center",
+      colorHex: isLightText ? "#F7E7A9" : "#8C6D23",
+      isVisible: !!resolvedDay
+    },
+    {
       id: "date",
       text: page.date || "",
       xPercent: 0.5,
@@ -361,7 +413,9 @@ function buildResolvedLayers(invitation, page) {
 
         const isVis = (def.id === 'guest_name' || def.id === 'guest_note')
           ? def.isVisible
-          : (custom.isVisible !== undefined ? custom.isVisible : def.isVisible);
+          : (def.id === 'day'
+              ? (custom.isVisible !== undefined ? (custom.isVisible && def.isVisible) : def.isVisible)
+              : (custom.isVisible !== undefined ? custom.isVisible : def.isVisible));
 
         return {
           ...def,

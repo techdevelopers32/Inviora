@@ -136,7 +136,7 @@ fun CreateEditEventScreen(
               pageName = "Mehndi",
               designId = allDesigns.getOrNull(0)?.id ?: defaultDesignId,
               greeting = getDefaultGreetingForPage("Wedding", "Mehndi"),
-              eventTitle = if (groomName.isNotBlank() && brideName.isNotBlank()) "$groomName & $brideName" else "Wedding Celebration",
+              eventTitle = com.example.data.model.EventDateParser.formatCoupleNames(groomName, brideName).ifBlank { "Wedding Celebration" },
               date = "December 17, 2026",
               time = "7:00 PM",
               venue = "Royal Garden Pavilions",
@@ -152,7 +152,7 @@ fun CreateEditEventScreen(
               pageName = "Baraat",
               designId = allDesigns.getOrNull(1 % allDesigns.size.coerceAtLeast(1))?.id ?: defaultDesignId,
               greeting = getDefaultGreetingForPage("Wedding", "Baraat"),
-              eventTitle = if (groomName.isNotBlank() && brideName.isNotBlank()) "$groomName & $brideName" else "Wedding Celebration",
+              eventTitle = com.example.data.model.EventDateParser.formatCoupleNames(groomName, brideName).ifBlank { "Wedding Celebration" },
               date = "December 18, 2026",
               time = "7:30 PM",
               venue = "Grand Palace Ballroom",
@@ -168,7 +168,7 @@ fun CreateEditEventScreen(
               pageName = "Walima",
               designId = allDesigns.getOrNull(2 % allDesigns.size.coerceAtLeast(1))?.id ?: defaultDesignId,
               greeting = getDefaultGreetingForPage("Wedding", "Walima"),
-              eventTitle = if (groomName.isNotBlank() && brideName.isNotBlank()) "$groomName & $brideName" else "Wedding Celebration",
+              eventTitle = com.example.data.model.EventDateParser.formatCoupleNames(groomName, brideName).ifBlank { "Wedding Celebration" },
               date = "December 20, 2026",
               time = "8:00 PM",
               venue = "The Ritz Banquets",
@@ -544,7 +544,7 @@ fun CreateEditEventScreen(
             pageName = defaultPageName,
             designId = allDesigns.getOrNull(pages.size % allDesigns.size.coerceAtLeast(1))?.id ?: "",
             greeting = getDefaultGreetingForPage(eventType, defaultPageName),
-            eventTitle = if (isWedding && groomName.isNotBlank() && brideName.isNotBlank()) "$groomName & $brideName" else title.ifBlank { "Celebration" },
+            eventTitle = if (isWedding) com.example.data.model.EventDateParser.formatCoupleNames(groomName, brideName).ifBlank { title.ifBlank { "Celebration" } } else title.ifBlank { "Celebration" },
             date = "December 19, 2026",
             time = "8:00 PM",
             venue = "Imperial Banquet Hall",
@@ -942,7 +942,7 @@ private fun PageEditorDialog(
   val isWedding = event.eventType.equals("Wedding", ignoreCase = true)
 
   fun constructPage(): EventPage {
-    return page.copy(
+    val tempPage = page.copy(
       pageName = pageName.trim(),
       designId = selectedDesignId,
       greeting = greeting.trim(),
@@ -952,8 +952,30 @@ private fun PageEditorDialog(
       additionalDetails = additionalDetails.trim(),
       showBismillah = showBismillah,
       bismillahArabic = bismillahArabic.trim(),
-      bismillahEnglish = bismillahEnglish.trim(),
-      textLayoutJson = TextLayerConfig.listToJson(textLayers)
+      bismillahEnglish = bismillahEnglish.trim()
+    )
+    val syncedLayers = TextLayerConfig.buildResolvedLayers(event, tempPage)
+    val currentLayoutMap = textLayers.associateBy { it.id }
+    val mergedLayers = syncedLayers.map { synced ->
+      val current = currentLayoutMap[synced.id]
+      if (current != null) {
+        synced.copy(
+          xPercent = current.xPercent,
+          yPercent = current.yPercent,
+          fontSizeSp = current.fontSizeSp,
+          fontWeight = current.fontWeight,
+          fontStyle = current.fontStyle,
+          fontFamily = current.fontFamily,
+          colorHex = current.colorHex,
+          alignment = current.alignment,
+          isVisible = current.isVisible
+        )
+      } else {
+        synced
+      }
+    }
+    return tempPage.copy(
+      textLayoutJson = TextLayerConfig.listToJson(mergedLayers)
     )
   }
 

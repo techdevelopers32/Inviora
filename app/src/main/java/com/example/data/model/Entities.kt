@@ -322,7 +322,9 @@ data class EventEntity(
           pageName = s.name,
           designId = designId,
           greeting = getDefaultGreetingForPage(eventType, s.name),
-          eventTitle = if (eventType == "Wedding" && groomName.isNotBlank() && brideName.isNotBlank()) "$groomName & $brideName" else title,
+          eventTitle = if (eventType == "Wedding") {
+            EventDateParser.formatCoupleNames(groomName, brideName).ifBlank { title.ifBlank { "Wedding Celebration" } }
+          } else title,
           date = s.date,
           time = s.time,
           venue = s.venue,
@@ -339,7 +341,9 @@ data class EventEntity(
         pageName = if (eventType == "Wedding") "Wedding Ceremony" else (title.ifBlank { "Main Celebration" }),
         designId = designId,
         greeting = getDefaultGreetingForPage(eventType, "Main"),
-        eventTitle = if (eventType == "Wedding" && groomName.isNotBlank() && brideName.isNotBlank()) "$groomName & $brideName" else title,
+        eventTitle = if (eventType == "Wedding") {
+          EventDateParser.formatCoupleNames(groomName, brideName).ifBlank { title.ifBlank { "Wedding Celebration" } }
+        } else title,
         date = primaryDate,
         venue = primaryVenue,
         additionalDetails = notes,

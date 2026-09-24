@@ -5,6 +5,7 @@ import com.example.data.dao.EventDao
 import com.example.data.dao.GuestDao
 import com.example.data.model.BUILT_IN_DESIGN_IDS
 import com.example.data.model.DesignTemplateEntity
+import com.example.data.model.EventDateParser
 import com.example.data.model.EventEntity
 import com.example.data.model.EventPage
 import com.example.data.model.GuestEntity
@@ -129,6 +130,7 @@ data class PublishedPageDto(
   val pageOrder: Int,
   val designId: String,
   val date: String,
+  val day: String = "",
   val time: String,
   val venue: String,
   val greeting: String,
@@ -149,6 +151,7 @@ data class PublishedPageDto(
     "pageOrder" to pageOrder,
     "designId" to designId,
     "date" to date,
+    "day" to day,
     "time" to time,
     "venue" to venue,
     "greeting" to greeting,
@@ -359,6 +362,7 @@ open class FirestorePublishingRepository(
         pageOrder = page.pageOrder,
         designId = effectiveDesignId,
         date = page.date,
+        day = EventDateParser.deriveDayOfWeek(page.date),
         time = page.time,
         venue = page.venue,
         greeting = page.greeting,

@@ -1,6 +1,7 @@
 package com.example
 
 import com.example.data.model.DesignTemplateEntity
+import com.example.data.model.EventDateParser
 import com.example.data.model.EventEntity
 import com.example.data.model.EventPage
 import com.example.data.model.GuestEntity
@@ -63,7 +64,62 @@ class ExampleUnitTest {
     val coupleLayer = layers.find { it.id == "couple_names" }
     assertNotNull(coupleLayer)
     assertTrue(coupleLayer!!.isVisible)
-    assertEquals("Ali & Ayesha", coupleLayer.text)
+    assertEquals("Ali with Ayesha", coupleLayer.text)
+  }
+
+  @Test
+  fun testCoupleNamesFormattingCombinations() {
+    // Both Groom and Bride
+    assertEquals("Ali with Ayesha", EventDateParser.formatCoupleNames("Ali", "Ayesha"))
+    assertEquals("Ali with Ayesha", EventDateParser.formatCoupleNames("  Ali  ", "  Ayesha  "))
+
+    // Groom only
+    assertEquals("Ali", EventDateParser.formatCoupleNames("Ali", ""))
+    assertEquals("Ali", EventDateParser.formatCoupleNames("Ali", null))
+    assertEquals("Ali", EventDateParser.formatCoupleNames("Ali", "   "))
+
+    // Bride only
+    assertEquals("Ayesha", EventDateParser.formatCoupleNames("", "Ayesha"))
+    assertEquals("Ayesha", EventDateParser.formatCoupleNames(null, "Ayesha"))
+    assertEquals("Ayesha", EventDateParser.formatCoupleNames("   ", "Ayesha"))
+
+    // Neither
+    assertEquals("", EventDateParser.formatCoupleNames("", ""))
+    assertEquals("", EventDateParser.formatCoupleNames(null, null))
+    assertEquals("", EventDateParser.formatCoupleNames("   ", "   "))
+  }
+
+  @Test
+  fun testCoupleNamesEmptyNameBehaviorInLayers() {
+    val groomOnlyEvent = EventEntity(
+      id = "evt_groom",
+      title = "Celebration",
+      eventType = "Wedding",
+      groomName = "Ali",
+      brideName = ""
+    )
+    val page1 = EventPage(
+      id = "p1",
+      eventId = "evt_groom",
+      pageName = "Main",
+      designId = "dsg_1"
+    )
+    val layers1 = TextLayerConfig.buildResolvedLayers(groomOnlyEvent, page1)
+    val coupleLayer1 = layers1.find { it.id == "couple_names" }
+    assertNotNull(coupleLayer1)
+    assertEquals("Ali", coupleLayer1!!.text)
+
+    val brideOnlyEvent = EventEntity(
+      id = "evt_bride",
+      title = "Celebration",
+      eventType = "Wedding",
+      groomName = "",
+      brideName = "Ayesha"
+    )
+    val layers2 = TextLayerConfig.buildResolvedLayers(brideOnlyEvent, page1)
+    val coupleLayer2 = layers2.find { it.id == "couple_names" }
+    assertNotNull(coupleLayer2)
+    assertEquals("Ayesha", coupleLayer2!!.text)
   }
 
   @Test
@@ -1093,5 +1149,82 @@ class ExampleUnitTest {
     val map = dto.toMap()
     assertEquals("Kindly arrive by 6 PM", map["guestNote"])
     assertFalse("Phone must not be in published map", map.containsKey("phone"))
+  }
+
+  @Test
+  fun testDayDerivedFromDateAutomatically() {
+    // 1. ISO format: 2026-10-24 -> Saturday
+    assertEquals("Saturday", com.example.data.model.EventDateParser.deriveDayOfWeek("2026-10-24", java.util.Locale.ENGLISH))
+
+    // 2. Natural format: 24 October 2026 -> Saturday
+    assertEquals("Saturday", com.example.data.model.EventDateParser.deriveDayOfWeek("24 October 2026", java.util.Locale.ENGLISH))
+
+    // 3. Format with comma: December 18, 2026 -> Friday
+    assertEquals("Friday", com.example.data.model.EventDateParser.deriveDayOfWeek("December 18, 2026", java.util.Locale.ENGLISH))
+
+    // 4. Invalid date -> empty string
+    assertEquals("", com.example.data.model.EventDateParser.deriveDayOfWeek("InvalidDate", java.util.Locale.ENGLISH))
+
+    // 5. Empty date -> empty string
+    assertEquals("", com.example.data.model.EventDateParser.deriveDayOfWeek("", java.util.Locale.ENGLISH))
+  }
+
+  @Test
+  fun testStaleTextLayoutJsonDoesNotOverrideCurrentEventDateAndGreeting() {
+    // Page has saved textLayoutJson containing original template values:
+    val staleTextLayoutJson = """
+      [
+        {"id":"date","text":"December 18, 2026","xPercent":0.5,"yPercent":0.58,"fontSizeSp":14,"isVisible":true},
+        {"id":"greeting","text":"You are warmly invited...","xPercent":0.5,"yPercent":0.46,"fontSizeSp":12,"isVisible":true}
+      ]
+    """.trimIndent()
+
+    // But current page has updated values:
+    val page = EventPage(
+      id = "page_1",
+      eventId = "evt_1",
+      pageName = "Main",
+      designId = "dsg_1",
+      greeting = "We warmly invite you to celebrate with us.",
+      eventTitle = "Celebration",
+      date = "24 October 2026",
+      time = "7:00 PM",
+      venue = "Grand Palace",
+      textLayoutJson = staleTextLayoutJson
+    )
+
+    val layers = TextLayerConfig.buildResolvedLayers(null, page)
+
+    val dateLayer = layers.find { it.id == "date" }
+    assertNotNull(dateLayer)
+    assertEquals("24 October 2026", dateLayer!!.text)
+
+    val greetingLayer = layers.find { it.id == "greeting" }
+    assertNotNull(greetingLayer)
+    assertEquals("We warmly invite you to celebrate with us.", greetingLayer!!.text)
+
+    val dayLayer = layers.find { it.id == "day" }
+    assertNotNull(dayLayer)
+    assertTrue("Day layer must be visible for valid date", dayLayer!!.isVisible)
+    assertEquals("Saturday", dayLayer.text)
+  }
+
+  @Test
+  fun testDayLayerHiddenWhenDateIsEmpty() {
+    val page = EventPage(
+      id = "page_1",
+      eventId = "evt_1",
+      pageName = "Main",
+      designId = "dsg_1",
+      greeting = "Celebrate with us",
+      eventTitle = "Celebration",
+      date = "",
+      time = "7:00 PM"
+    )
+
+    val layers = TextLayerConfig.buildResolvedLayers(null, page)
+    val dayLayer = layers.find { it.id == "day" }
+    assertNotNull(dayLayer)
+    assertFalse("Day layer must be hidden when date is empty", dayLayer!!.isVisible)
   }
 }

@@ -590,7 +590,9 @@ fun GuestsScreen(
         pageName = if (currentEvent?.eventType == "Wedding") "Wedding Ceremony" else (currentEvent?.title ?: "Main Ceremony"),
         designId = currentEvent?.designId ?: "",
         greeting = getDefaultGreetingForPage(currentEvent?.eventType ?: "Wedding", "Main"),
-        eventTitle = if (currentEvent?.eventType == "Wedding" && !currentEvent.groomName.isNullOrBlank() && !currentEvent.brideName.isNullOrBlank()) "${currentEvent.groomName} & ${currentEvent.brideName}" else (currentEvent?.title ?: "Wedding Celebration"),
+        eventTitle = if (currentEvent?.eventType == "Wedding") {
+          com.example.data.model.EventDateParser.formatCoupleNames(currentEvent.groomName, currentEvent.brideName).ifBlank { currentEvent.title.ifBlank { "Wedding Celebration" } }
+        } else (currentEvent?.title ?: "Wedding Celebration"),
         date = currentEvent?.primaryDate ?: "",
         venue = currentEvent?.primaryVenue ?: "",
         additionalDetails = currentEvent?.notes ?: "",
