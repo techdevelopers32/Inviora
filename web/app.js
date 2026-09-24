@@ -272,7 +272,7 @@ function buildResolvedLayers(invitation, page) {
       yPercent: isWedding ? 0.22 : 0.14,
       fontSizeSp: 24,
       fontWeight: "700",
-      fontFamily: "'Cinzel', 'Playfair Display', serif",
+      fontFamily: "'Noto Serif', Georgia, serif",
       alignment: "Center",
       colorHex: isLightText ? "#FFFFFF" : "#1E1A16",
       isVisible: true

@@ -232,6 +232,7 @@ html, body {
   left: calc(var(--x-percent) * 100%);
   top: calc(var(--y-percent) * 100%);
   transform: translate(-50%, -50%);
+  width: max-content;
   max-width: 88%;
   text-align: var(--text-align, center);
   color: var(--color, #1E1A16);
